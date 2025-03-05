@@ -3,6 +3,7 @@ import Login from './Login';
 import Register from './Register';
 import Chat from './Chat';
 import ChatList from './ChatList';
+import './App.css';
 
 function App() {
     const [user, setUser] = useState(() => {
