@@ -1,25 +1,26 @@
+# ------------------- БЭКЕНД (app.py) -------------------
 import eventlet
 eventlet.monkey_patch()
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO, emit, join_room, leave_room
-from flask_cors import CORS  # для CORS
+from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 from datetime import datetime
 
 app = Flask(__name__)
-CORS(app)  # Разрешаем CORS для всего приложения
+CORS(app)
 
 app.config['SECRET_KEY'] = 'secret!'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///messenger.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///teamforge.db'  # Переименуем под проект
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 db = SQLAlchemy(app)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
 
-# Модели базы данных
+# ------------------- МОДЕЛИ -------------------
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -50,39 +51,39 @@ class Reaction(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     reaction = db.Column(db.String(20), nullable=False)
 
-# Регистрация пользователя
+# ------------------- РЕГИСТРАЦИЯ -------------------
 @app.route('/register', methods=['POST'])
 def register():
     data = request.json
     if User.query.filter_by(username=data['username']).first():
-        return jsonify({'status': 'fail', 'message': 'Username exists'}), 400
+        return jsonify({'status': 'fail', 'message': 'Имя пользователя уже занято'}), 400
     user = User(username=data['username'], password_hash=generate_password_hash(data['password']))
     db.session.add(user)
     db.session.commit()
-    return jsonify({'status': 'success', 'message': 'User registered'})
+    return jsonify({'status': 'success', 'message': 'Пользователь успешно зарегистрирован'})
 
-# Аутентификация пользователя
+# ------------------- ЛОГИН -------------------
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
     user = User.query.filter_by(username=data['username']).first()
     if user and check_password_hash(user.password_hash, data['password']):
         return jsonify({'status': 'success', 'user_id': user.id})
-    return jsonify({'status': 'fail', 'message': 'Invalid credentials'}), 401
+    return jsonify({'status': 'fail', 'message': 'Неверные логин или пароль'}), 401
 
-# Получение списка пользователей (для выбора участников чата)
+# ------------------- СПИСОК ВСЕХ ПОЛЬЗОВАТЕЛЕЙ -------------------
 @app.route('/users', methods=['GET'])
 def get_users():
     users = User.query.all()
     result = [{'id': u.id, 'username': u.username} for u in users]
     return jsonify(result)
 
-# Создание группового чата (участники выбираются из существующих пользователей)
+# ------------------- СОЗДАНИЕ ГРУППОВОГО ЧАТА -------------------
 @app.route('/create_chat', methods=['POST'])
 def create_chat():
     data = request.json
     if not data.get('name') or not data.get('user_ids'):
-        return jsonify({'status': 'fail', 'message': 'Name and user_ids required'}), 400
+        return jsonify({'status': 'fail', 'message': 'Нужно указать название чата и участников'}), 400
     chat = Chat(name=data['name'], is_group=True)
     db.session.add(chat)
     db.session.commit()
@@ -94,7 +95,7 @@ def create_chat():
     db.session.commit()
     return jsonify({'status': 'success', 'chat_id': chat.id})
 
-# Новый endpoint: Получение списка чатов для пользователя
+# ------------------- СПИСОК ЧАТОВ ДЛЯ ПОЛЬЗОВАТЕЛЯ -------------------
 @app.route('/user_chats/<int:user_id>', methods=['GET'])
 def get_user_chats(user_id):
     chat_users = ChatUser.query.filter_by(user_id=user_id).all()
@@ -105,7 +106,7 @@ def get_user_chats(user_id):
             chats.append({'id': chat.id, 'name': chat.name, 'is_group': chat.is_group})
     return jsonify(chats)
 
-# Получение истории сообщений с поиском
+# ------------------- ИСТОРИЯ СООБЩЕНИЙ (С ПОИСКОМ) -------------------
 @app.route('/messages/<int:chat_id>', methods=['GET'])
 def get_messages(chat_id):
     keyword = request.args.get('q', '')
@@ -125,14 +126,14 @@ def get_messages(chat_id):
         })
     return jsonify(result)
 
-# Загрузка медиафайлов (изображения, видео, документы)
+# ------------------- ЗАГРУЗКА МЕДИАФАЙЛОВ -------------------
 @app.route('/upload', methods=['POST'])
 def upload():
     if 'file' not in request.files:
-        return jsonify({'status': 'fail', 'message': 'No file'}), 400
+        return jsonify({'status': 'fail', 'message': 'Файл не найден'}), 400
     file = request.files['file']
     if file.filename == '':
-        return jsonify({'status': 'fail', 'message': 'No selected file'}), 400
+        return jsonify({'status': 'fail', 'message': 'Файл не выбран'}), 400
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
     file.save(filepath)
     return jsonify({'status': 'success', 'filename': file.filename})
@@ -141,24 +142,40 @@ def upload():
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# WebSocket события для обмена сообщениями, реакциями и уведомлениями
+# ------------------- ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ ДЛЯ ПРОФИЛЯ ПОЛЬЗОВАТЕЛЯ -------------------
+@app.route('/profile_data/<int:user_id>', methods=['GET'])
+def get_profile_data(user_id):
+    # Кол-во чатов
+    chats_count = ChatUser.query.filter_by(user_id=user_id).count()
+    # Кол-во сообщений
+    messages_count = Message.query.filter_by(sender_id=user_id).count()
+    # Документы (файлы), которые отправлял пользователь
+    docs_messages = Message.query.filter_by(sender_id=user_id).filter(Message.media_filename.isnot(None)).all()
+    docs = [msg.media_filename for msg in docs_messages]
+    return jsonify({
+        'chats_count': chats_count,
+        'messages_count': messages_count,
+        'docs': docs
+    })
+
+# ------------------- WEBSOCKET -------------------
 @socketio.on('connect')
 def handle_connect():
-    emit('status', {'message': 'Connected'})
+    emit('status', {'message': 'Подключено'})
 
 @socketio.on('join')
 def handle_join(data):
     chat_id = data['chat_id']
-    username = data.get('username', 'Anonymous')
+    username = data.get('username', 'Аноним')
     join_room(str(chat_id))
-    emit('status', {'message': f"{username} joined chat {chat_id}"}, room=str(chat_id))
+    emit('status', {'message': f"{username} вошёл в чат {chat_id}"}, room=str(chat_id))
 
 @socketio.on('leave')
 def handle_leave(data):
     chat_id = data['chat_id']
-    username = data.get('username', 'Anonymous')
+    username = data.get('username', 'Аноним')
     leave_room(str(chat_id))
-    emit('status', {'message': f"{username} left chat {chat_id}"}, room=str(chat_id))
+    emit('status', {'message': f"{username} покинул(а) чат {chat_id}"}, room=str(chat_id))
 
 @socketio.on('send_message')
 def handle_send_message(data):
