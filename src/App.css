@@ -1,0 +1,177 @@
+/* ------------------- СТИЛИ (app.css) ------------------- */
+
+/* Сброс общих отступов и оформление */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f0f2f5;
+  color: #333;
+}
+
+/* Контейнер */
+.container {
+  width: 90%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Шапка */
+header {
+  background-color: #ffffff;
+  padding: 15px 0;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 20px;
+}
+
+header .nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+header .logo {
+  font-size: 24px;
+  font-weight: bold;
+  color: #007BFF;
+}
+
+header .menu a {
+  margin-left: 15px;
+  text-decoration: none;
+  color: #007BFF;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+header .menu a:hover {
+  color: #0056b3;
+}
+
+/* Кнопки */
+button {
+  padding: 10px 20px;
+  border: none;
+  background-color: #007BFF;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  font-size: 14px;
+  margin: 5px 0;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+/* Формы */
+.form-group {
+  margin-bottom: 15px;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="file"],
+input[type="search"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+/* Главная страница */
+.main-page {
+  text-align: center;
+  margin: 50px 0;
+}
+
+.main-page h1 {
+  font-size: 48px;
+  margin-bottom: 20px;
+  color: #007BFF;
+}
+
+.main-page p {
+  font-size: 18px;
+  margin-bottom: 30px;
+}
+
+/* Блок чата */
+.chat-container {
+  border: 1px solid #ccc;
+  height: 400px;
+  overflow-y: scroll;
+  border-radius: 4px;
+  padding: 10px;
+  margin-bottom: 20px;
+  background-color: #fff;
+}
+
+.message {
+  margin-bottom: 15px;
+  padding: 10px;
+  background-color: #f7f7f7;
+  border-radius: 6px;
+}
+
+.message strong {
+  display: block;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.message img {
+  max-width: 200px;
+  border-radius: 4px;
+  margin-top: 5px;
+}
+
+/* Список чатов */
+.chat-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.chat-list li {
+  padding: 10px;
+  border: 1px solid #ccc;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  background-color: #fff;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.chat-list li:hover {
+  background-color: #f0f0f0;
+}
+
+/* Профиль */
+.profile-container {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.profile-container h2 {
+  margin-bottom: 15px;
+}
+
+/* Небольшие вспомогательные элементы */
+.small-text {
+  font-size: 12px;
+  color: #777;
+}
+
+.status-message {
+  margin: 10px 0;
+  color: #007BFF;
+  font-weight: 500;
+}
