@@ -1,6 +1,6 @@
 /* App.jsx */
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import MainPage from './pages/MainPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -40,7 +40,7 @@ function App() {
                             <>
                                 <Link to="/profile">Профиль</Link>
                                 <Link to="/chats">Чаты</Link>
-                                {/* Убираем кнопку «Выйти» из шапки */}
+                                {/* Кнопку "Выйти" убрали из шапки, она только в Профиле */}
                             </>
                         ) : (
                             <>

@@ -1,4 +1,3 @@
-# ------------------- БЭКЕНД (app.py) -------------------
 import eventlet
 eventlet.monkey_patch()
 
@@ -14,9 +13,10 @@ app = Flask(__name__)
 CORS(app)
 
 app.config['SECRET_KEY'] = 'secret!'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///teamforge.db'  # Переименуем под проект
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///teamforge.db'
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
 db = SQLAlchemy(app)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
 
@@ -44,6 +44,8 @@ class Message(db.Model):
     content = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     media_filename = db.Column(db.String(120), nullable=True)
+    # Флаг, что сообщение удалено для всех
+    deleted_for_all = db.Column(db.Boolean, default=False)
 
 class Reaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -51,7 +53,13 @@ class Reaction(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     reaction = db.Column(db.String(20), nullable=False)
 
-# ------------------- РЕГИСТРАЦИЯ -------------------
+# Таблица, хранящая, какие сообщения пользователь удалил только у себя
+class DeletedMessage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+# ------------------- РЕГИСТРАЦИЯ И ЛОГИН -------------------
 @app.route('/register', methods=['POST'])
 def register():
     data = request.json
@@ -62,7 +70,6 @@ def register():
     db.session.commit()
     return jsonify({'status': 'success', 'message': 'Пользователь успешно зарегистрирован'})
 
-# ------------------- ЛОГИН -------------------
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
@@ -71,7 +78,7 @@ def login():
         return jsonify({'status': 'success', 'user_id': user.id})
     return jsonify({'status': 'fail', 'message': 'Неверные логин или пароль'}), 401
 
-# ------------------- СПИСОК ВСЕХ ПОЛЬЗОВАТЕЛЕЙ -------------------
+# ------------------- СПИСОК ПОЛЬЗОВАТЕЛЕЙ -------------------
 @app.route('/users', methods=['GET'])
 def get_users():
     users = User.query.all()
@@ -106,14 +113,37 @@ def get_user_chats(user_id):
             chats.append({'id': chat.id, 'name': chat.name, 'is_group': chat.is_group})
     return jsonify(chats)
 
-# ------------------- ИСТОРИЯ СООБЩЕНИЙ (С ПОИСКОМ) -------------------
+# ------------------- ИСТОРИЯ СООБЩЕНИЙ (С УЧЁТОМ УДАЛЕНИЯ) -------------------
 @app.route('/messages/<int:chat_id>', methods=['GET'])
 def get_messages(chat_id):
+    """
+    Для корректной фильтрации удалённых сообщений
+    нужно, чтобы фронтенд передавал user_id в query-параметре:
+    GET /messages/123?user_id=100
+    """
+    user_id = request.args.get('user_id', type=int)
     keyword = request.args.get('q', '')
-    query = Message.query.filter(Message.chat_id == chat_id)
+
+    # Базовый запрос
+    query = Message.query.filter(
+        Message.chat_id == chat_id,
+        Message.deleted_for_all == False  # исключаем сообщения, удалённые для всех
+    )
+
+    # Поиск по контенту, если нужно
     if keyword:
         query = query.filter(Message.content.contains(keyword))
+
+    # Если пришёл user_id, исключаем сообщения, удалённые данным пользователем
+    if user_id:
+        # Найдём список message_id, которые этот пользователь удалил у себя
+        deleted_ids = DeletedMessage.query.filter_by(user_id=user_id).all()
+        deleted_ids_list = [dm.message_id for dm in deleted_ids]
+        if deleted_ids_list:
+            query = query.filter(~Message.id.in_(deleted_ids_list))
+
     messages = query.order_by(Message.timestamp).all()
+
     result = []
     for msg in messages:
         result.append({
@@ -142,14 +172,11 @@ def upload():
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# ------------------- ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ ДЛЯ ПРОФИЛЯ ПОЛЬЗОВАТЕЛЯ -------------------
+# ------------------- ДОП. ДАННЫЕ ДЛЯ ПРОФИЛЯ -------------------
 @app.route('/profile_data/<int:user_id>', methods=['GET'])
 def get_profile_data(user_id):
-    # Кол-во чатов
     chats_count = ChatUser.query.filter_by(user_id=user_id).count()
-    # Кол-во сообщений
     messages_count = Message.query.filter_by(sender_id=user_id).count()
-    # Документы (файлы), которые отправлял пользователь
     docs_messages = Message.query.filter_by(sender_id=user_id).filter(Message.media_filename.isnot(None)).all()
     docs = [msg.media_filename for msg in docs_messages]
     return jsonify({
@@ -158,7 +185,105 @@ def get_profile_data(user_id):
         'docs': docs
     })
 
-# ------------------- WEBSOCKET -------------------
+# ------------------- УДАЛЕНИЕ СООБЩЕНИЯ (для себя или для всех) -------------------
+@app.route('/messages/<int:message_id>', methods=['DELETE'])
+def delete_message(message_id):
+    """
+    Пример запросов:
+    DELETE /messages/15?mode=everyone&user_id=100
+      -> удаление сообщения №15 для всех
+    DELETE /messages/15?mode=me&user_id=100
+      -> удаление сообщения №15 только для user_id=100
+    """
+    mode = request.args.get('mode')
+    user_id = request.args.get('user_id', type=int)
+
+    if not user_id:
+        return jsonify({'status': 'fail', 'message': 'Не указан user_id'}), 400
+
+    message = Message.query.get(message_id)
+    if not message:
+        return jsonify({'status': 'fail', 'message': 'Сообщение не найдено'}), 404
+
+    if mode == 'everyone':
+        # Можно физически удалить:
+        # db.session.delete(message)
+        # или просто пометить:
+        message.deleted_for_all = True
+        db.session.commit()
+
+        # Сообщаем через сокет, что сообщение "удалено для всех"
+        socketio.emit('message_deleted_for_all', {
+            'message_id': message_id
+        }, room=str(message.chat_id))
+
+        return jsonify({'status': 'success', 'message': 'Сообщение удалено для всех'})
+    else:
+        # Удалить только у себя: добавляем запись в DeletedMessage
+        deleted_entry = DeletedMessage.query.filter_by(
+            message_id=message_id, user_id=user_id
+        ).first()
+
+        if not deleted_entry:
+            deleted_entry = DeletedMessage(message_id=message_id, user_id=user_id)
+            db.session.add(deleted_entry)
+            db.session.commit()
+
+        # Сообщаем через сокет, что сообщение "удалено для одного"
+        # (при желании можно реализовать обновление у фронта)
+        socketio.emit('message_deleted_for_user', {
+            'message_id': message_id,
+            'user_id': user_id
+        }, room=str(message.chat_id))
+
+        return jsonify({'status': 'success', 'message': 'Сообщение удалено только для вас'})
+
+# ------------------- ПЕРЕСЫЛКА СООБЩЕНИЯ -------------------
+@app.route('/forward_message', methods=['POST'])
+def forward_message():
+    """
+    Пример запроса (JSON):
+    {
+      "message_id": 15,
+      "to_chat_id": 20,
+      "user_id": 100
+    }
+    """
+    data = request.json
+    from_message_id = data.get('message_id')
+    to_chat_id = data.get('to_chat_id')
+    user_id = data.get('user_id')
+
+    if not (from_message_id and to_chat_id and user_id):
+        return jsonify({'status': 'fail', 'message': 'Не хватает параметров'}), 400
+
+    old_msg = Message.query.get(from_message_id)
+    if not old_msg:
+        return jsonify({'status': 'fail', 'message': 'Исходное сообщение не найдено'}), 404
+
+    new_msg = Message(
+        chat_id=to_chat_id,
+        sender_id=user_id,
+        content=old_msg.content,
+        media_filename=old_msg.media_filename
+        # timestamp создастся автоматически
+    )
+    db.session.add(new_msg)
+    db.session.commit()
+
+    # Уведомим через сокеты об отправке нового сообщения в другом чате
+    socketio.emit('receive_message', {
+        'id': new_msg.id,
+        'chat_id': new_msg.chat_id,
+        'sender_id': new_msg.sender_id,
+        'content': new_msg.content,
+        'timestamp': new_msg.timestamp.isoformat(),
+        'media_filename': new_msg.media_filename
+    }, room=str(to_chat_id))
+
+    return jsonify({'status': 'success', 'message': 'Сообщение переслано', 'new_message_id': new_msg.id})
+
+# ------------------- WEBSOCKET СОБЫТИЯ -------------------
 @socketio.on('connect')
 def handle_connect():
     emit('status', {'message': 'Подключено'})
@@ -187,6 +312,7 @@ def handle_send_message(data):
     )
     db.session.add(msg)
     db.session.commit()
+
     emit('receive_message', {
         'id': msg.id,
         'chat_id': msg.chat_id,
