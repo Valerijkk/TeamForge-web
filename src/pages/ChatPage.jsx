@@ -2,43 +2,45 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
 
-// Подключение к вашему бэкенду
 const socket = io('http://localhost:5000');
 
 function ChatPage({ user }) {
     const { chatId } = useParams();
     const navigate = useNavigate();
 
-    // Список сообщений
+    // --- Основные состояния ---
     const [messages, setMessages] = useState([]);
-    // Состояние для ввода текста
     const [input, setInput] = useState('');
-    // Состояние для выбранного файла
     const [file, setFile] = useState(null);
-    // Поисковая строка
     const [search, setSearch] = useState('');
-    // Включённые ли уведомления
     const [notification, setNotification] = useState(true);
-    // Какой-то текст статуса (например «Пользователь вошёл в чат»)
     const [status, setStatus] = useState('');
 
-    // Все реакции (для каждого сообщения храним массив объектов { user_id, reaction })
-    // Пример: { 10: [ { user_id: 2, reaction: '👍' }, { user_id: 3, reaction: '❤️' } ] }
+    // Храним все реакции: { messageId: [ { user_id, reaction } ] }
     const [messageReactions, setMessageReactions] = useState({});
-
-    // При клике на сообщение показываем меню (реакции, переслать, удалить и т.д.)
+    // Какой ID сообщения сейчас открыт для контекстного меню
     const [menuOpenForMsgId, setMenuOpenForMsgId] = useState(null);
 
-    // Если пользователь не залогинен, уходим на главную
+    // --- Модальное окно для «ответа» (Reply) ---
+    const [replyModalOpen, setReplyModalOpen] = useState(false);
+    const [replyTargetId, setReplyTargetId] = useState(null);
+    const [replyContent, setReplyContent] = useState('');
+
+    // --- Модальное окно для «пересылки» (Forward) ---
+    const [forwardModalOpen, setForwardModalOpen] = useState(false);
+    const [forwardMessageId, setForwardMessageId] = useState(null);
+    const [availableChats, setAvailableChats] = useState([]);
+    const [selectedChatId, setSelectedChatId] = useState('');
+
+    // Если пользователь не авторизован – выходим
     useEffect(() => {
         if (!user) {
             navigate('/');
         }
     }, [user, navigate]);
 
-    // Функция подгрузки сообщений (учитываем user_id, чтобы бэкенд знал, какие сообщения скрывать, если удалено "для себя")
+    // Подгружаем сообщения
     const fetchMessages = useCallback(() => {
-        // Обратите внимание: чтобы бэкенд знал user_id, нужно передать его в query-параметре
         let url = `http://localhost:5000/messages/${chatId}?user_id=${user.id}`;
         if (search) {
             url += `&q=${search}`;
@@ -48,76 +50,67 @@ function ChatPage({ user }) {
             .then(data => setMessages(data));
     }, [chatId, search, user.id]);
 
-    // Функция подгрузки исторических реакций, если есть эндпоинт `GET /reactions/<chat_id>`
+    // (Опционально) Подгружаем исторические реакции, если есть эндпоинт GET /reactions/<chatId>
     const fetchReactions = useCallback(() => {
-        // Если у вас нет отдельного эндпоинта, удалите эту функцию
         fetch(`http://localhost:5000/reactions/${chatId}`)
             .then(res => res.json())
             .then(data => {
-                // Ожидаем, что data это объект { [msgId]: [ {user_id, reaction}, ... ] }
                 setMessageReactions(data);
             })
             .catch(() => {
-                // Если у вас нет такого эндпоинта, можно просто ничего не делать
+                // Если эндпоинта нет, игнорируем
             });
     }, [chatId]);
 
-    // Подключаемся к чату через socket.io
-    useEffect(() => {
-        // 1) Входим в комнату чата
-        socket.emit('join', { chat_id: chatId, username: user?.username || '' });
-        // 2) Грузим сообщения
-        fetchMessages();
-        // 3) Грузим исторические реакции (при желании)
-        fetchReactions();
+    // Загружаем чаты пользователя (чтобы иметь список при пересылке)
+    const fetchUserChats = useCallback(() => {
+        if (!user) return;
+        fetch(`http://localhost:5000/user_chats/${user.id}`)
+            .then(res => res.json())
+            .then(chats => setAvailableChats(chats));
+    }, [user]);
 
-        // Обработчик прихода нового сообщения
+    // Подключаемся по сокету, слушаем события
+    useEffect(() => {
+        socket.emit('join', { chat_id: chatId, username: user?.username || '' });
+        fetchMessages();
+        fetchReactions();
+        fetchUserChats();
+
         const handleReceiveMessage = (data) => {
             setMessages(prev => [...prev, data]);
         };
 
-        // Обработчик прихода реакции
         const handleReceiveReaction = (data) => {
             // data = { message_id, user_id, reaction }
             const { message_id, user_id, reaction } = data;
             setMessageReactions(prev => {
                 const oldReactions = prev[message_id] || [];
-                // Удаляем старую реакцию от того же user_id (если была)
                 const filtered = oldReactions.filter(r => r.user_id !== user_id);
-                // Добавляем новую
                 filtered.push({ user_id, reaction });
                 return { ...prev, [message_id]: filtered };
             });
         };
 
-        // Обновление уведомлений
         const handleNotificationUpdated = (data) => {
             console.log('Notification settings updated:', data);
         };
 
-        // Обновление статуса (кто вошёл/вышел)
         const handleStatus = (data) => {
             setStatus(data.message);
             setTimeout(() => setStatus(''), 3000);
         };
 
-        // Если сообщение удалено для всех
         const handleMessageDeletedForAll = (data) => {
-            // data = { message_id }
-            // Можно либо убрать сообщение из локального списка, либо снова вызвать fetchMessages()
-            setMessages((prev) => prev.filter(msg => msg.id !== data.message_id));
+            setMessages(prev => prev.filter(msg => msg.id !== data.message_id));
         };
 
-        // Если сообщение удалено только для одного юзера
         const handleMessageDeletedForUser = (data) => {
-            // data = { message_id, user_id }
-            // Если это текущий пользователь, убираем сообщение из локального списка
             if (data.user_id === user.id) {
-                setMessages((prev) => prev.filter(msg => msg.id !== data.message_id));
+                setMessages(prev => prev.filter(msg => msg.id !== data.message_id));
             }
         };
 
-        // Подписываемся на события
         socket.on('receive_message', handleReceiveMessage);
         socket.on('receive_reaction', handleReceiveReaction);
         socket.on('notification_updated', handleNotificationUpdated);
@@ -126,9 +119,7 @@ function ChatPage({ user }) {
         socket.on('message_deleted_for_user', handleMessageDeletedForUser);
 
         return () => {
-            // Покидаем комнату при уходе со страницы
             socket.emit('leave', { chat_id: chatId, username: user?.username || '' });
-            // Отписываемся от событий
             socket.off('receive_message', handleReceiveMessage);
             socket.off('receive_reaction', handleReceiveReaction);
             socket.off('notification_updated', handleNotificationUpdated);
@@ -136,14 +127,14 @@ function ChatPage({ user }) {
             socket.off('message_deleted_for_all', handleMessageDeletedForAll);
             socket.off('message_deleted_for_user', handleMessageDeletedForUser);
         };
-    }, [chatId, user, fetchMessages, fetchReactions]);
+    }, [chatId, user, fetchMessages, fetchReactions, fetchUserChats]);
 
-    // Отправка сообщения (текст + файл)
+    // --- Отправка нового сообщения ---
     const sendMessage = async () => {
-        if (!input && !file) return; // не отправлять пустые сообщения
+        if (!input && !file) return;
         let media_filename = null;
 
-        // Если пользователь выбрал файл, загружаем его отдельно на бэкенд
+        // Если выбран файл, зальём его
         if (file) {
             const formData = new FormData();
             formData.append('file', file);
@@ -152,7 +143,6 @@ function ChatPage({ user }) {
             media_filename = uploadData.filename;
         }
 
-        // Посылаем событие "send_message" на сокет
         socket.emit('send_message', {
             chat_id: chatId,
             sender_id: user.id,
@@ -160,12 +150,11 @@ function ChatPage({ user }) {
             media_filename
         });
 
-        // Очищаем поле ввода и выбранный файл
         setInput('');
         setFile(null);
     };
 
-    // Отправка сообщения по Enter
+    // Отправка по Enter
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -173,7 +162,7 @@ function ChatPage({ user }) {
         }
     };
 
-    // Отправка реакции (через сокет)
+    // --- Реакции ---
     const sendReaction = (messageId, reaction) => {
         socket.emit('send_reaction', {
             chat_id: chatId,
@@ -181,66 +170,93 @@ function ChatPage({ user }) {
             user_id: user.id,
             reaction
         });
+        // Скрыть меню после клика
         setMenuOpenForMsgId(null);
     };
 
-    // Псевдо-функция пересылки: делаем реальный запрос к /forward_message
-    const forwardMessage = async (messageId) => {
-        // Попросим у пользователя ID чата, куда переслать
-        const toChatId = prompt('Введите ID чата, куда переслать сообщение');
-        if (!toChatId) {
-            setMenuOpenForMsgId(null);
-            return;
-        }
+    // --- Пересылка ---
+    const openForwardModal = (messageId) => {
+        setForwardMessageId(messageId);
+        setForwardModalOpen(true);
+        // Закрыть меню
+        setMenuOpenForMsgId(null);
+    };
 
+    const closeForwardModal = () => {
+        setForwardModalOpen(false);
+        setForwardMessageId(null);
+        setSelectedChatId('');
+    };
+
+    const confirmForward = async () => {
+        if (!selectedChatId || !forwardMessageId) return;
         const res = await fetch('http://localhost:5000/forward_message', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                message_id: messageId,
-                to_chat_id: parseInt(toChatId, 10),
+                message_id: forwardMessageId,
+                to_chat_id: parseInt(selectedChatId, 10),
                 user_id: user.id
             })
         });
         const data = await res.json();
         if (data.status === 'success') {
-            alert('Сообщение успешно переслано!');
+            alert('Сообщение переслано!');
         } else {
             alert(`Ошибка пересылки: ${data.message}`);
         }
+        closeForwardModal();
+    };
+
+    // --- Ответ (Reply) ---
+    const openReplyModal = (messageId) => {
+        setReplyTargetId(messageId);
+        setReplyContent('');
+        setReplyModalOpen(true);
+        // Закрыть меню
         setMenuOpenForMsgId(null);
     };
 
-    // Псевдо-функция ответа (зависит от логики, здесь просто alert)
-    const replyMessage = (messageId) => {
-        alert(`Ответить на сообщение ID=${messageId} (не реализовано)`);
-        setMenuOpenForMsgId(null);
+    const closeReplyModal = () => {
+        setReplyModalOpen(false);
+        setReplyTargetId(null);
+        setReplyContent('');
     };
 
-    // Удаление сообщения
+    const confirmReply = () => {
+        if (!replyTargetId) return;
+        // Отправляем сообщение с reply_to_id
+        socket.emit('send_message', {
+            chat_id: chatId,
+            sender_id: user.id,
+            content: replyContent,
+            media_filename: null,
+            reply_to_id: replyTargetId
+        });
+        closeReplyModal();
+    };
+
+    // --- Удаление ---
     const deleteMessage = async (messageId, forAll = false) => {
-        // Вызываем эндпоинт DELETE /messages/<messageId>?mode=everyone|me&user_id=<...>
         const mode = forAll ? 'everyone' : 'me';
         const url = `http://localhost:5000/messages/${messageId}?mode=${mode}&user_id=${user.id}`;
         const res = await fetch(url, { method: 'DELETE' });
         const data = await res.json();
         if (data.status === 'success') {
-            // Можно либо заново запросить список сообщений:
             await fetchMessages();
-            // Или дождаться событий сокета "message_deleted_for_all" / "message_deleted_for_user"
-            // В этом примере мы сразу обновляем по fetchMessages().
         } else {
             alert(`Ошибка удаления: ${data.message}`);
         }
         setMenuOpenForMsgId(null);
     };
 
-    // Функция для показа/скрытия меню при клике на сообщение
+    // --- Контекстное меню ---
+    // Останавливаем всплытие, чтобы оно не закрывалось/открывалось при клике на само сообщение
     const toggleMenuForMessage = (msgId) => {
         setMenuOpenForMsgId(prev => (prev === msgId ? null : msgId));
     };
 
-    // Функция определения как рендерить файл
+    // --- Отображение вложенных файлов ---
     const renderMedia = (filename) => {
         if (!filename) return null;
         const ext = filename.split('.').pop().toLowerCase();
@@ -261,7 +277,7 @@ function ChatPage({ user }) {
         );
     };
 
-    // Обновить настройки уведомлений
+    // --- Уведомления ---
     const updateNotification = () => {
         setNotification(!notification);
         socket.emit('update_notification', {
@@ -269,6 +285,11 @@ function ChatPage({ user }) {
             user_id: user.id,
             notifications_enabled: !notification
         });
+    };
+
+    // Поиск исходного сообщения для reply
+    const findOriginalMessage = (reply_to_id) => {
+        return messages.find(m => m.id === reply_to_id) || null;
     };
 
     return (
@@ -280,7 +301,6 @@ function ChatPage({ user }) {
             </button>
             {status && <p className="status-message">{status}</p>}
 
-            {/* Поиск сообщений */}
             <div>
                 <input
                     type="search"
@@ -291,66 +311,89 @@ function ChatPage({ user }) {
                 <button onClick={fetchMessages}>Искать</button>
             </div>
 
-            {/* Список сообщений */}
             <div className="chat-container">
-                {messages.map((msg) => (
-                    <div
-                        className="message"
-                        key={msg.id}
-                        onClick={() => toggleMenuForMessage(msg.id)}
-                        style={{ position: 'relative' }}
-                    >
-                        <strong>Пользователь {msg.sender_id}:</strong> {msg.content}
+                {messages.map(msg => {
+                    const original = msg.reply_to_id ? findOriginalMessage(msg.reply_to_id) : null;
+                    return (
+                        <div
+                            className="message"
+                            key={msg.id}
+                            // Клик по сообщению – открываем/закрываем меню
+                            onClick={() => toggleMenuForMessage(msg.id)}
+                            style={{ position: 'relative', cursor: 'pointer' }}
+                        >
+                            {/* Если сообщение переслано, на бэкенде мы можем добавить поле forwarded_from_id
+                  или "forwarded_from_username" и вернуть это поле через receive_message.
+                  Например: msg.forwarded_from_id != null ? ... */}
+                            {msg.forwarded_from_id && (
+                                <div style={{ fontSize: '0.9em', color: '#666', marginBottom: '5px' }}>
+                                    Переслано от пользователя {msg.forwarded_from_id}
+                                </div>
+                            )}
 
-                        {/* Если есть вложение (media_filename), отобразим его */}
-                        {msg.media_filename && (
-                            <div>
-                                {renderMedia(msg.media_filename)}
+                            {/* Если это «ответ», покажем небольшой блок «Ответ на ...» */}
+                            {msg.reply_to_id && (
+                                <div style={{ fontSize: '0.9em', color: '#666', marginBottom: '5px' }}>
+                                    Ответ на сообщение #{msg.reply_to_id}{' '}
+                                    {original && (
+                                        <em>({original.content ? original.content.slice(0, 30) : '...'}...)</em>
+                                    )}
+                                </div>
+                            )}
+
+                            <strong>Пользователь {msg.sender_id}:</strong> {msg.content}
+
+                            {/* Вложение */}
+                            {msg.media_filename && (
+                                <div>
+                                    {renderMedia(msg.media_filename)}
+                                </div>
+                            )}
+
+                            {/* Реакции */}
+                            {messageReactions[msg.id]?.length > 0 && (
+                                <div style={{ marginTop: '5px' }}>
+                                    {messageReactions[msg.id].map((r, index) => (
+                                        <div key={index}>
+                                            Пользователь {r.user_id} поставил {r.reaction}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            <div className="small-text">
+                                {new Date(msg.timestamp).toLocaleString()}
                             </div>
-                        )}
 
-                        {/* Отобразим все реакции, которые есть у сообщения */}
-                        {messageReactions[msg.id]?.length > 0 && (
-                            <div style={{ marginTop: '5px' }}>
-                                {messageReactions[msg.id].map((r, index) => (
-                                    <div key={index}>
-                                        Пользователь {r.user_id} поставил {r.reaction}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        <div className="small-text">
-                            {new Date(msg.timestamp).toLocaleString()}
+                            {/* Контекстное меню (останавливаем всплытие, чтобы не сработал onClick на родителе) */}
+                            {menuOpenForMsgId === msg.id && (
+                                <div
+                                    style={{
+                                        position: 'absolute',
+                                        top: '40px',
+                                        left: '10px',
+                                        background: '#fff',
+                                        border: '1px solid #ccc',
+                                        borderRadius: '4px',
+                                        padding: '10px',
+                                        zIndex: 10
+                                    }}
+                                    onClick={(e) => e.stopPropagation()} // <-- ВАЖНО: останавливаем всплытие клика
+                                >
+                                    <button onClick={() => sendReaction(msg.id, '👍')}>Реакция: 👍</button>
+                                    <button onClick={() => sendReaction(msg.id, '❤️')}>Реакция: ❤️</button>
+                                    <button onClick={() => openForwardModal(msg.id)}>Переслать</button>
+                                    <button onClick={() => openReplyModal(msg.id)}>Ответить</button>
+                                    <button onClick={() => deleteMessage(msg.id, false)}>Удалить у себя</button>
+                                    <button onClick={() => deleteMessage(msg.id, true)}>Удалить у всех</button>
+                                </div>
+                            )}
                         </div>
-
-                        {/* Контекстное меню (скрыто, пока не кликнем на сообщение) */}
-                        {menuOpenForMsgId === msg.id && (
-                            <div
-                                style={{
-                                    position: 'absolute',
-                                    top: '40px',
-                                    left: '10px',
-                                    background: '#fff',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '4px',
-                                    padding: '10px',
-                                    zIndex: 10
-                                }}
-                            >
-                                <button onClick={() => sendReaction(msg.id, '👍')}>Реакция: 👍</button>
-                                <button onClick={() => sendReaction(msg.id, '❤️')}>Реакция: ❤️</button>
-                                <button onClick={() => forwardMessage(msg.id)}>Переслать</button>
-                                <button onClick={() => replyMessage(msg.id)}>Ответить</button>
-                                <button onClick={() => deleteMessage(msg.id, false)}>Удалить у себя</button>
-                                <button onClick={() => deleteMessage(msg.id, true)}>Удалить у всех</button>
-                            </div>
-                        )}
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
-            {/* Блок ввода нового сообщения */}
+            {/* Поле ввода нового сообщения */}
             <div>
                 <input
                     type="text"
@@ -365,8 +408,77 @@ function ChatPage({ user }) {
                 />
                 <button onClick={sendMessage}>Отправить</button>
             </div>
+
+            {/* Модалка для ПЕРЕСЫЛКИ */}
+            {forwardModalOpen && (
+                <div style={modalStyle}>
+                    <div style={modalContentStyle}>
+                        <h3>Переслать сообщение</h3>
+                        <p>Выберите чат, куда переслать сообщение #{forwardMessageId}:</p>
+                        <select
+                            value={selectedChatId}
+                            onChange={(e) => setSelectedChatId(e.target.value)}
+                        >
+                            <option value="">-- Выберите чат --</option>
+                            {availableChats.map(chat => (
+                                <option key={chat.id} value={chat.id}>
+                                    {chat.name} (ID: {chat.id})
+                                </option>
+                            ))}
+                        </select>
+
+                        <div style={{ marginTop: '10px', textAlign: 'right' }}>
+                            <button onClick={confirmForward}>Переслать</button>
+                            <button onClick={closeForwardModal} style={{ marginLeft: '10px' }}>
+                                Отмена
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Модалка для ОТВЕТА */}
+            {replyModalOpen && (
+                <div style={modalStyle}>
+                    <div style={modalContentStyle}>
+                        <h3>Ответ на сообщение #{replyTargetId}</h3>
+                        <textarea
+                            rows="4"
+                            style={{ width: '100%' }}
+                            placeholder="Введите ваш ответ..."
+                            value={replyContent}
+                            onChange={(e) => setReplyContent(e.target.value)}
+                        />
+                        <div style={{ marginTop: '10px', textAlign: 'right' }}>
+                            <button onClick={confirmReply}>Отправить</button>
+                            <button onClick={closeReplyModal} style={{ marginLeft: '10px' }}>
+                                Отмена
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+
+/* Небольшие стили для модальных окон */
+const modalStyle = {
+    position: 'fixed',
+    top: 0, left: 0, right: 0, bottom: 0,
+    background: 'rgba(0,0,0,0.6)',  // Тёмная подложка
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000
+};
+
+const modalContentStyle = {
+    background: '#fff',
+    padding: '20px',
+    borderRadius: '8px',
+    minWidth: '300px',
+    boxShadow: '0 2px 10px rgba(0,0,0,0.3)'
+};
 
 export default ChatPage;
