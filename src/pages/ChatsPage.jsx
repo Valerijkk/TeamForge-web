@@ -1,6 +1,11 @@
-/* ------------------- pages/ChatsPage.jsx ------------------- */
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+// И снова используем ту же функцию
+function sanitizeInput(value) {
+    const forbiddenPatterns = /drop\s+table|delete\s+from|truncate\s+table|update\s+.*\s+set|insert\s+into|select\s+.*\s+from/gi;
+    return value.replace(forbiddenPatterns, '');
+}
 
 function ChatsPage({ user }) {
     const [chats, setChats] = useState([]);
@@ -39,7 +44,8 @@ function ChatsPage({ user }) {
     };
 
     const createChat = async () => {
-        if (!chatName || selected.length === 0) {
+        const safeName = sanitizeInput(chatName);
+        if (!safeName || selected.length === 0) {
             alert('Укажите название чата и выберите участников');
             return;
         }
@@ -48,14 +54,14 @@ function ChatsPage({ user }) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                name: chatName,
+                name: safeName,
                 user_ids: userIds,
                 creator_id: user.id
             })
         });
         const data = await res.json();
         if (data.status === 'success') {
-            const newChat = { id: data.chat_id, name: chatName, is_group: true };
+            const newChat = { id: data.chat_id, name: safeName, is_group: true };
             setChats(prev => [...prev, newChat]);
             navigate(`/chat/${newChat.id}`); // После создания переходим в чат
         } else {
@@ -87,7 +93,7 @@ function ChatsPage({ user }) {
                 type="text"
                 placeholder="Название чата"
                 value={chatName}
-                onChange={e => setChatName(e.target.value)}
+                onChange={e => setChatName(sanitizeInput(e.target.value))}
             />
             <h4>Выберите участников:</h4>
             {allUsers.map(u => (

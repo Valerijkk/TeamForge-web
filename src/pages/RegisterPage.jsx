@@ -1,6 +1,11 @@
-/* ------------------- pages/RegisterPage.jsx ------------------- */
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+// Функция для простой фильтрации потенциально опасных SQL-команд
+function sanitizeInput(value) {
+    const forbiddenPatterns = /drop\s+table|delete\s+from|truncate\s+table|update\s+.*\s+set|insert\s+into|select\s+.*\s+from/gi;
+    return value.replace(forbiddenPatterns, '');
+}
 
 function RegisterPage({ setUser }) {
     const [username, setUsername] = useState('');
@@ -12,7 +17,10 @@ function RegisterPage({ setUser }) {
             const res = await fetch('http://localhost:5000/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({
+                    username: sanitizeInput(username),
+                    password: sanitizeInput(password)
+                })
             });
             const data = await res.json();
             if (data.status === 'success') {
@@ -20,7 +28,10 @@ function RegisterPage({ setUser }) {
                 const loginRes = await fetch('http://localhost:5000/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({
+                        username: sanitizeInput(username),
+                        password: sanitizeInput(password)
+                    })
                 });
                 const loginData = await loginRes.json();
                 if (loginData.status === 'success') {
@@ -45,7 +56,7 @@ function RegisterPage({ setUser }) {
                     type="text"
                     placeholder="Имя пользователя"
                     value={username}
-                    onChange={e => setUsername(e.target.value)}
+                    onChange={e => setUsername(sanitizeInput(e.target.value))}
                 />
             </div>
             <div className="form-group">
@@ -53,7 +64,7 @@ function RegisterPage({ setUser }) {
                     type="password"
                     placeholder="Пароль"
                     value={password}
-                    onChange={e => setPassword(e.target.value)}
+                    onChange={e => setPassword(sanitizeInput(e.target.value))}
                 />
             </div>
             <button onClick={registerAndLogin}>Зарегистрироваться</button>

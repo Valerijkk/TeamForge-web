@@ -1,6 +1,11 @@
-/* ------------------- pages/LoginPage.jsx ------------------- */
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+// Повторяем ту же функцию для валидации
+function sanitizeInput(value) {
+    const forbiddenPatterns = /drop\s+table|delete\s+from|truncate\s+table|update\s+.*\s+set|insert\s+into|select\s+.*\s+from/gi;
+    return value.replace(forbiddenPatterns, '');
+}
 
 function LoginPage({ setUser }) {
     const [username, setUsername] = useState('');
@@ -11,7 +16,10 @@ function LoginPage({ setUser }) {
         const res = await fetch('http://localhost:5000/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({
+                username: sanitizeInput(username),
+                password: sanitizeInput(password)
+            })
         });
         const data = await res.json();
         if (data.status === 'success') {
@@ -30,7 +38,7 @@ function LoginPage({ setUser }) {
                     type="text"
                     placeholder="Имя пользователя"
                     value={username}
-                    onChange={e => setUsername(e.target.value)}
+                    onChange={e => setUsername(sanitizeInput(e.target.value))}
                 />
             </div>
             <div className="form-group">
@@ -38,7 +46,7 @@ function LoginPage({ setUser }) {
                     type="password"
                     placeholder="Пароль"
                     value={password}
-                    onChange={e => setPassword(e.target.value)}
+                    onChange={e => setPassword(sanitizeInput(e.target.value))}
                 />
             </div>
             <button onClick={login}>Войти</button>
