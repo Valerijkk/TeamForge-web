@@ -1,10 +1,13 @@
+/* ------------------- pages/ChatsPage.jsx ------------------- */
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// И снова используем ту же функцию
 function sanitizeInput(value) {
-    const forbiddenPatterns = /drop\s+table|delete\s+from|truncate\s+table|update\s+.*\s+set|insert\s+into|select\s+.*\s+from/gi;
-    return value.replace(forbiddenPatterns, '');
+    const forbiddenSQLPatterns = /drop\s+table|delete\s+from|truncate\s+table|update\s+.*\s+set|insert\s+into|select\s+.*\s+from/gi;
+    let cleaned = value.replace(forbiddenSQLPatterns, '');
+    cleaned = cleaned.replace(/<[^>]*>/g, '');
+    cleaned = cleaned.slice(0, 100);
+    return cleaned.trim();
 }
 
 function ChatsPage({ user }) {
@@ -46,26 +49,30 @@ function ChatsPage({ user }) {
     const createChat = async () => {
         const safeName = sanitizeInput(chatName);
         if (!safeName || selected.length === 0) {
-            alert('Укажите название чата и выберите участников');
+            alert('Укажите название чата и выберите участников.');
             return;
         }
         const userIds = selected.map(u => u.id);
-        const res = await fetch('http://localhost:5000/create_chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                name: safeName,
-                user_ids: userIds,
-                creator_id: user.id
-            })
-        });
-        const data = await res.json();
-        if (data.status === 'success') {
-            const newChat = { id: data.chat_id, name: safeName, is_group: true };
-            setChats(prev => [...prev, newChat]);
-            navigate(`/chat/${newChat.id}`); // После создания переходим в чат
-        } else {
-            alert(data.message);
+        try {
+            const res = await fetch('http://localhost:5000/create_chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: safeName,
+                    user_ids: userIds,
+                    creator_id: user.id
+                })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                const newChat = { id: data.chat_id, name: safeName, is_group: true };
+                setChats(prev => [...prev, newChat]);
+                navigate(`/chat/${newChat.id}`); // После создания переходим в чат
+            } else {
+                alert(data.message);
+            }
+        } catch (error) {
+            console.error('Ошибка создания чата:', error);
         }
     };
 
@@ -74,7 +81,7 @@ function ChatsPage({ user }) {
     };
 
     return (
-        <div>
+        <div className="container">
             <h2>Ваши чаты</h2>
             {chats.length === 0 ? (
                 <p>У вас пока нет ни одного чата.</p>
@@ -89,12 +96,14 @@ function ChatsPage({ user }) {
             )}
             <hr />
             <h3>Создать групповой чат</h3>
-            <input
-                type="text"
-                placeholder="Название чата"
-                value={chatName}
-                onChange={e => setChatName(sanitizeInput(e.target.value))}
-            />
+            <div className="form-group">
+                <input
+                    type="text"
+                    placeholder="Название чата"
+                    value={chatName}
+                    onChange={e => setChatName(e.target.value)}
+                />
+            </div>
             <h4>Выберите участников:</h4>
             {allUsers.map(u => (
                 <div key={u.id}>
