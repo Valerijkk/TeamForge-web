@@ -7,7 +7,9 @@ import ProfilePage from './pages/ProfilePage';
 import ChatsPage from './pages/ChatsPage';
 import ChatPage from './pages/ChatPage';
 import CallsPage from './pages/CallsPage';
-import CalendarPage from './pages/CalendarPage';
+import KnowledgeBasePage from './pages/KnowledgeBasePage';
+import AIAssistantPage from './pages/AIAssistantPage';
+import SoftwarePage from './pages/SoftwarePage';
 
 import './App.css';
 
@@ -19,17 +21,17 @@ function App() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (user) {
-            localStorage.setItem('user', JSON.stringify(user));
-        } else {
-            localStorage.removeItem('user');
-        }
+        if (user) localStorage.setItem('user', JSON.stringify(user));
+        else localStorage.removeItem('user');
     }, [user]);
 
     const logout = () => {
         setUser(null);
         navigate('/');
     };
+
+    // Пример проверки: считаем, что админом является пользователь с именем "admin"
+    const isAdmin = user && user.username === 'admin';
 
     return (
         <>
@@ -39,10 +41,12 @@ function App() {
                     <nav className="menu">
                         {user ? (
                             <>
-                                <Link to="/profile">Профиль</Link>
-                                <Link to="/chats">Чаты</Link>
+                                <Link to="/software">Программное обеспечение</Link>
+                                <Link to="/knowledge">База знаний</Link>
+                                <Link to="/ai-assistant">ИИ Помощник</Link>
                                 <Link to="/calls">Звонки</Link>
-                                <Link to="/calendar">Календарь</Link>
+                                <Link to="/chats">Чаты</Link>
+                                <Link to="/profile">Профиль</Link>
                             </>
                         ) : (
                             <>
@@ -62,7 +66,9 @@ function App() {
                     <Route path="/chats" element={<ChatsPage user={user} />} />
                     <Route path="/chat/:chatId" element={<ChatPage user={user} />} />
                     <Route path="/calls" element={<CallsPage user={user} />} />
-                    <Route path="/calendar" element={<CalendarPage />} />
+                    <Route path="/knowledge" element={<KnowledgeBasePage />} />
+                    <Route path="/ai-assistant" element={<AIAssistantPage />} />
+                    <Route path="/software" element={<SoftwarePage isAdmin={isAdmin} />} />
                 </Routes>
             </div>
         </>
