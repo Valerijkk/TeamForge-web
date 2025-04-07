@@ -98,6 +98,15 @@ class Task(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+# Новая модель для программного обеспечения (ПО)
+class Software(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    image_url = db.Column(db.String(255), nullable=True)
+    github_url = db.Column(db.String(255), nullable=True)
+
+
 # ------------------- AUTH ROUTES -------------------
 @app.route('/register', methods=['POST'])
 def register():
@@ -504,6 +513,73 @@ def delete_task(task_id):
     db.session.delete(task)
     db.session.commit()
     return jsonify({'status': 'success', 'message': 'Задача удалена'})
+
+
+# ------------------- SOFTWARE (Программное обеспечение) ROUTES -------------------
+# Модель Software определена выше
+
+@app.route('/software', methods=['GET'])
+def get_software():
+    softwares = Software.query.all()
+    result = []
+    for sw in softwares:
+        result.append({
+            'id': sw.id,
+            'title': sw.title,
+            'description': sw.description,
+            'image_url': sw.image_url,
+            'github_url': sw.github_url
+        })
+    return jsonify(result)
+
+
+@app.route('/software', methods=['POST'])
+def create_software():
+    data = request.json
+    # Проверка прав: админ должен передавать admin=true в запросе
+    if not data.get('admin', False):
+        return jsonify({'status': 'fail', 'message': 'Нет прав доступа'}), 403
+    title = data.get('title')
+    if not title:
+        return jsonify({'status': 'fail', 'message': 'Название обязательно'}), 400
+    sw = Software(
+        title=title,
+        description=data.get('description', ''),
+        image_url=data.get('image_url', ''),
+        github_url=data.get('github_url', '')
+    )
+    db.session.add(sw)
+    db.session.commit()
+    return jsonify({'status': 'success', 'message': 'Программное обеспечение создано', 'software_id': sw.id})
+
+
+@app.route('/software/<int:software_id>', methods=['PUT'])
+def update_software(software_id):
+    data = request.json
+    if not data.get('admin', False):
+        return jsonify({'status': 'fail', 'message': 'Нет прав доступа'}), 403
+    sw = Software.query.get(software_id)
+    if not sw:
+        return jsonify({'status': 'fail', 'message': 'Запись не найдена'}), 404
+    sw.title = data.get('title', sw.title)
+    sw.description = data.get('description', sw.description)
+    sw.image_url = data.get('image_url', sw.image_url)
+    sw.github_url = data.get('github_url', sw.github_url)
+    db.session.commit()
+    return jsonify({'status': 'success', 'message': 'Запись обновлена'})
+
+
+@app.route('/software/<int:software_id>', methods=['DELETE'])
+def delete_software(software_id):
+    data = request.json
+    if not data.get('admin', False):
+        return jsonify({'status': 'fail', 'message': 'Нет прав доступа'}), 403
+    sw = Software.query.get(software_id)
+    if not sw:
+        return jsonify({'status': 'fail', 'message': 'Запись не найдена'}), 404
+    db.session.delete(sw)
+    db.session.commit()
+    return jsonify({'status': 'success', 'message': 'Запись удалена'})
 
 
 # ------------------- WEBSOCKET EVENTS -------------------
