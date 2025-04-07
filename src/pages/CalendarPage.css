@@ -1,0 +1,90 @@
+.my-react-calendar {
+    margin: 20px auto;
+    max-width: 350px;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    font-family: sans-serif;
+    border: none;
+    overflow: hidden;
+}
+
+/* Навигационная панель (месяц, стрелки и т.п.) */
+.my-react-calendar .react-calendar__navigation {
+    display: flex;
+    background: #3f51b5; /* Фон навигации */
+    color: #fff;         /* Белый текст */
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+}
+
+/* Кнопки в навигации */
+.my-react-calendar .react-calendar__navigation button {
+    background: none;
+    border: none;
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 0 2px;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.my-react-calendar .react-calendar__navigation button:hover:not(:disabled) {
+    background: rgba(255,255,255,0.2);
+}
+
+/* Недоступные кнопки (например, переход за границы) */
+.my-react-calendar .react-calendar__navigation button:disabled {
+    color: rgba(255,255,255,0.4);
+    cursor: default;
+}
+
+/* Шапка с днями недели (ПН, ВТ, СР...) */
+.my-react-calendar .react-calendar__month-view__weekdays {
+    background: #f0f0f0;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    color: #666;
+}
+
+.my-react-calendar .react-calendar__month-view__weekdays__weekday {
+    padding: 0.5rem;
+    text-align: center;
+}
+
+/* Плитки дней */
+.my-react-calendar .react-calendar__tile {
+    height: 50px;
+    background: none;
+    margin: 2px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+}
+
+/* Ховер на плитке дня */
+.my-react-calendar .react-calendar__tile:hover {
+    background: #e6e6e6;
+}
+
+/* Сегодня */
+.my-react-calendar .react-calendar__tile--now {
+    background: #fffbe5; /* чуть-чуть желтоватый фон */
+    border: 1px solid #3f51b5;
+    color: #333;
+}
+
+/* Выбранная дата */
+.my-react-calendar .react-calendar__tile--active {
+    background: #3f51b5;
+    color: #fff;
+}
+
+/* Выходные (СБ, ВС) можно подсветить: */
+.my-react-calendar .react-calendar__month-view__days__day--weekend {
+    color: #d10000;
+}

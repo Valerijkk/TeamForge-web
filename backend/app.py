@@ -1,4 +1,3 @@
-# app.py
 import eventlet
 eventlet.monkey_patch()
 
@@ -8,7 +7,7 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
-from datetime import datetime
+from datetime import datetime, date
 
 app = Flask(__name__)
 CORS(app)
@@ -83,11 +82,20 @@ class CallHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     caller_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     call_type = db.Column(db.String(20), nullable=False)  # personal или group
-    # Участники храним как строку с разделением запятыми, например: ",2,3,"
+    # Участников храним как строку с запятыми, например: ",2,3,"
     participants = db.Column(db.String(200))
     start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=False)
-    duration = db.Column(db.Integer, nullable=False)  # длительность в секундах
+    duration = db.Column(db.Integer, nullable=False)  # в секундах
+
+
+# Модель для задач (календарь)
+class Task(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    due_date = db.Column(db.Date, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 # ------------------- AUTH ROUTES -------------------
@@ -126,8 +134,7 @@ def get_users():
 def get_profile_data(user_id):
     chats_count = ChatUser.query.filter_by(user_id=user_id).count()
     messages_count = Message.query.filter_by(sender_id=user_id).count()
-    docs_messages = Message.query.filter_by(sender_id=user_id) \
-        .filter(Message.media_filename.isnot(None)).all()
+    docs_messages = Message.query.filter_by(sender_id=user_id).filter(Message.media_filename.isnot(None)).all()
     docs = [msg.media_filename for msg in docs_messages]
     return jsonify({
         'chats_count': chats_count,
@@ -245,10 +252,8 @@ def create_chat():
     chat = Chat(name=data['name'], is_group=True)
     db.session.add(chat)
     db.session.commit()
-
     if data.get('creator_id') not in data['user_ids']:
         data['user_ids'].append(data.get('creator_id'))
-
     for user_id in data['user_ids']:
         chat_user = ChatUser(chat_id=chat.id, user_id=user_id, notifications_enabled=True)
         db.session.add(chat_user)
@@ -263,11 +268,7 @@ def get_user_chats(user_id):
     for cu in chat_users:
         chat = Chat.query.get(cu.chat_id)
         if chat:
-            chats.append({
-                'id': chat.id,
-                'name': chat.name,
-                'is_group': chat.is_group
-            })
+            chats.append({'id': chat.id, 'name': chat.name, 'is_group': chat.is_group})
     return jsonify(chats)
 
 
@@ -275,10 +276,7 @@ def get_user_chats(user_id):
 def get_messages(chat_id):
     user_id = request.args.get('user_id', type=int)
     keyword = request.args.get('q', '')
-    query = Message.query.filter(
-        Message.chat_id == chat_id,
-        Message.deleted_for_all == False
-    )
+    query = Message.query.filter(Message.chat_id == chat_id, Message.deleted_for_all == False)
     if keyword:
         query = query.filter(Message.content.contains(keyword))
     if user_id:
@@ -416,9 +414,12 @@ def get_call_history(user_id):
         if rec.participants:
             participant_ids = rec.participants.strip(',').split(',')
             for pid in participant_ids:
-                u = User.query.get(int(pid))
-                if u:
-                    recipient_usernames.append(u.username)
+                try:
+                    u = User.query.get(int(pid))
+                    if u:
+                        recipient_usernames.append(u.username)
+                except:
+                    continue
         result.append({
             'id': rec.id,
             'caller_id': rec.caller_id,
@@ -430,6 +431,79 @@ def get_call_history(user_id):
             'duration': rec.duration
         })
     return jsonify(result)
+
+
+# ------------------- TASK (Календарь/Задачи) ROUTES -------------------
+@app.route('/tasks', methods=['GET'])
+def get_tasks():
+    date_filter = request.args.get('date')  # формат YYYY-MM-DD
+    if date_filter:
+        try:
+            due_date = datetime.strptime(date_filter, "%Y-%m-%d").date()
+        except Exception as e:
+            return jsonify({'status': 'fail', 'message': 'Неверный формат даты'}), 400
+        tasks = Task.query.filter_by(due_date=due_date).all()
+    else:
+        tasks = Task.query.all()
+    result = []
+    for task in tasks:
+        result.append({
+            'id': task.id,
+            'title': task.title,
+            'description': task.description,
+            'due_date': task.due_date.strftime("%Y-%m-%d"),
+            'created_at': task.created_at.isoformat()
+        })
+    return jsonify(result)
+
+
+@app.route('/tasks', methods=['POST'])
+def create_task():
+    data = request.json
+    title = data.get('title')
+    due_date_str = data.get('due_date')
+    if not title or not due_date_str:
+        return jsonify({'status': 'fail', 'message': 'Название и дата обязательны'}), 400
+    try:
+        due_date = datetime.strptime(due_date_str, "%Y-%m-%d").date()
+    except Exception as e:
+        return jsonify({'status': 'fail', 'message': 'Неверный формат даты'}), 400
+    task = Task(
+        title=title,
+        description=data.get('description', ''),
+        due_date=due_date
+    )
+    db.session.add(task)
+    db.session.commit()
+    return jsonify({'status': 'success', 'message': 'Задача создана', 'task_id': task.id})
+
+
+@app.route('/tasks/<int:task_id>', methods=['PUT'])
+def update_task(task_id):
+    task = Task.query.get(task_id)
+    if not task:
+        return jsonify({'status': 'fail', 'message': 'Задача не найдена'}), 404
+    data = request.json
+    task.title = data.get('title', task.title)
+    task.description = data.get('description', task.description)
+    due_date_str = data.get('due_date')
+    if due_date_str:
+        try:
+            task.due_date = datetime.strptime(due_date_str, "%Y-%m-%d").date()
+        except Exception as e:
+            return jsonify({'status': 'fail', 'message': 'Неверный формат даты'}), 400
+    db.session.commit()
+    return jsonify({'status': 'success', 'message': 'Задача обновлена'})
+
+
+@app.route('/tasks/<int:task_id>', methods=['DELETE'])
+def delete_task(task_id):
+    task = Task.query.get(task_id)
+    if not task:
+        return jsonify({'status': 'fail', 'message': 'Задача не найдена'}), 404
+    db.session.delete(task)
+    db.session.commit()
+    return jsonify({'status': 'success', 'message': 'Задача удалена'})
 
 
 # ------------------- WEBSOCKET EVENTS -------------------
@@ -500,10 +574,7 @@ def handle_send_reaction(data):
 
 @socketio.on('update_notification')
 def handle_update_notification(data):
-    chat_user = ChatUser.query.filter_by(
-        chat_id=data['chat_id'],
-        user_id=data['user_id']
-    ).first()
+    chat_user = ChatUser.query.filter_by(chat_id=data['chat_id'], user_id=data['user_id']).first()
     if chat_user:
         chat_user.notifications_enabled = data['notifications_enabled']
         db.session.commit()

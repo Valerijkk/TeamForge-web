@@ -1,4 +1,3 @@
-/* App.jsx */
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import MainPage from './pages/MainPage';
@@ -8,6 +7,7 @@ import ProfilePage from './pages/ProfilePage';
 import ChatsPage from './pages/ChatsPage';
 import ChatPage from './pages/ChatPage';
 import CallsPage from './pages/CallsPage';
+import CalendarPage from './pages/CalendarPage';
 
 import './App.css';
 
@@ -42,6 +42,7 @@ function App() {
                                 <Link to="/profile">Профиль</Link>
                                 <Link to="/chats">Чаты</Link>
                                 <Link to="/calls">Звонки</Link>
+                                <Link to="/calendar">Календарь</Link>
                             </>
                         ) : (
                             <>
@@ -52,7 +53,6 @@ function App() {
                     </nav>
                 </div>
             </header>
-
             <div className="container">
                 <Routes>
                     <Route path="/" element={<MainPage />} />
@@ -62,6 +62,7 @@ function App() {
                     <Route path="/chats" element={<ChatsPage user={user} />} />
                     <Route path="/chat/:chatId" element={<ChatPage user={user} />} />
                     <Route path="/calls" element={<CallsPage user={user} />} />
+                    <Route path="/calendar" element={<CalendarPage />} />
                 </Routes>
             </div>
         </>

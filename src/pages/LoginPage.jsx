@@ -1,14 +1,5 @@
-/* ------------------- pages/LoginPage.jsx ------------------- */
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-function sanitizeInput(value) {
-    const forbiddenSQLPatterns = /drop\s+table|delete\s+from|truncate\s+table|update\s+.*\s+set|insert\s+into|select\s+.*\s+from/gi;
-    let cleaned = value.replace(forbiddenSQLPatterns, '');
-    cleaned = cleaned.replace(/<[^>]*>/g, '');
-    cleaned = cleaned.slice(0, 100);
-    return cleaned.trim();
-}
 
 function LoginPage({ setUser }) {
     const [username, setUsername] = useState('');
@@ -16,32 +7,31 @@ function LoginPage({ setUser }) {
     const navigate = useNavigate();
 
     const login = async () => {
-        const safeUsername = sanitizeInput(username);
-        const safePassword = sanitizeInput(password);
-
-        if (!safeUsername || !safePassword) {
+        if (!username.trim() || !password.trim()) {
             alert('Введите логин и пароль.');
             return;
         }
-
         try {
             const res = await fetch('http://localhost:5000/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: safeUsername,
-                    password: safePassword
-                })
+                body: JSON.stringify({ username, password })
             });
             const data = await res.json();
             if (data.status === 'success') {
-                setUser({ id: data.user_id, username: safeUsername });
+                setUser({ id: data.user_id, username });
                 navigate('/chats');
             } else {
                 alert(data.message);
             }
         } catch (error) {
             console.error('Ошибка при входе:', error);
+        }
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            login();
         }
     };
 
@@ -53,7 +43,8 @@ function LoginPage({ setUser }) {
                     type="text"
                     placeholder="Имя пользователя"
                     value={username}
-                    onChange={e => setUsername(e.target.value)}
+                    onChange={(e) => setUsername(e.target.value)}
+                    onKeyDown={handleKeyDown}
                 />
             </div>
             <div className="form-group">
@@ -61,7 +52,8 @@ function LoginPage({ setUser }) {
                     type="password"
                     placeholder="Пароль"
                     value={password}
-                    onChange={e => setPassword(e.target.value)}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={handleKeyDown}
                 />
             </div>
             <button onClick={login}>Войти</button>
