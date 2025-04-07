@@ -7,6 +7,7 @@ import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
 import ChatsPage from './pages/ChatsPage';
 import ChatPage from './pages/ChatPage';
+import CallsPage from './pages/CallsPage';
 
 import './App.css';
 
@@ -27,7 +28,7 @@ function App() {
 
     const logout = () => {
         setUser(null);
-        navigate('/'); // После логаута на главную
+        navigate('/');
     };
 
     return (
@@ -40,7 +41,7 @@ function App() {
                             <>
                                 <Link to="/profile">Профиль</Link>
                                 <Link to="/chats">Чаты</Link>
-                                {/* Кнопку "Выйти" убрали из шапки, она только в Профиле */}
+                                <Link to="/calls">Звонки</Link>
                             </>
                         ) : (
                             <>
@@ -60,6 +61,7 @@ function App() {
                     <Route path="/profile" element={<ProfilePage user={user} onLogout={logout} />} />
                     <Route path="/chats" element={<ChatsPage user={user} />} />
                     <Route path="/chat/:chatId" element={<ChatPage user={user} />} />
+                    <Route path="/calls" element={<CallsPage user={user} />} />
                 </Routes>
             </div>
         </>

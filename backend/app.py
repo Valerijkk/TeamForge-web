@@ -1,3 +1,4 @@
+# app.py
 import eventlet
 eventlet.monkey_patch()
 
@@ -21,22 +22,25 @@ db = SQLAlchemy(app)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
 
 
-# ------------------- МОДЕЛИ -------------------
+# ------------------- MODELS -------------------
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
+
 
 class Chat(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), nullable=False)
     is_group = db.Column(db.Boolean, default=False)
 
+
 class ChatUser(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     chat_id = db.Column(db.Integer, db.ForeignKey('chat.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     notifications_enabled = db.Column(db.Boolean, default=True)
+
 
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -45,20 +49,17 @@ class Message(db.Model):
     content = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     media_filename = db.Column(db.String(120), nullable=True)
-    # Флаг, что сообщение удалено для всех
     deleted_for_all = db.Column(db.Boolean, default=False)
-
-    # Поле "ответ на" (Reply). Может быть None, если это обычное сообщение
     reply_to_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)
-
-    # Поле "переслано от" (Forward). Может быть None, если это не пересланное сообщение
     forwarded_from_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
 
 class Reaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     reaction = db.Column(db.String(20), nullable=False)
+
 
 class DeletedMessage(db.Model):
     """
@@ -69,7 +70,27 @@ class DeletedMessage(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
 
-# ------------------- РЕГИСТРАЦИЯ И ЛОГИН -------------------
+# Модель для системы друзей
+class Friendship(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    requester_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    status = db.Column(db.String(20), default='pending')  # pending, accepted
+
+
+# Модель для истории звонков
+class CallHistory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    caller_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    call_type = db.Column(db.String(20), nullable=False)  # personal или group
+    # Участники храним как строку с разделением запятыми, например: ",2,3,"
+    participants = db.Column(db.String(200))
+    start_time = db.Column(db.DateTime, nullable=False)
+    end_time = db.Column(db.DateTime, nullable=False)
+    duration = db.Column(db.Integer, nullable=False)  # длительность в секундах
+
+
+# ------------------- AUTH ROUTES -------------------
 @app.route('/register', methods=['POST'])
 def register():
     data = request.json
@@ -83,6 +104,7 @@ def register():
     db.session.commit()
     return jsonify({'status': 'success', 'message': 'Пользователь успешно зарегистрирован'})
 
+
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
@@ -92,7 +114,7 @@ def login():
     return jsonify({'status': 'fail', 'message': 'Неверные логин или пароль'}), 401
 
 
-# ------------------- СПИСОК ПОЛЬЗОВАТЕЛЕЙ -------------------
+# ------------------- USER ROUTES -------------------
 @app.route('/users', methods=['GET'])
 def get_users():
     users = User.query.all()
@@ -100,7 +122,121 @@ def get_users():
     return jsonify(result)
 
 
-# ------------------- СОЗДАНИЕ ГРУППОВОГО ЧАТА -------------------
+@app.route('/profile_data/<int:user_id>', methods=['GET'])
+def get_profile_data(user_id):
+    chats_count = ChatUser.query.filter_by(user_id=user_id).count()
+    messages_count = Message.query.filter_by(sender_id=user_id).count()
+    docs_messages = Message.query.filter_by(sender_id=user_id) \
+        .filter(Message.media_filename.isnot(None)).all()
+    docs = [msg.media_filename for msg in docs_messages]
+    return jsonify({
+        'chats_count': chats_count,
+        'messages_count': messages_count,
+        'docs': docs
+    })
+
+
+# ------------------- FRIENDSHIP ROUTES -------------------
+@app.route('/friend_request', methods=['POST'])
+def send_friend_request():
+    data = request.json
+    requester_id = data.get('requester_id')
+    receiver_id = data.get('receiver_id')
+    if not requester_id or not receiver_id:
+        return jsonify({'status': 'fail', 'message': 'Не указан один из ID'}), 400
+    if requester_id == receiver_id:
+        return jsonify({'status': 'fail', 'message': 'Нельзя добавить себя в друзья'}), 400
+    existing = Friendship.query.filter(
+        ((Friendship.requester_id == requester_id) & (Friendship.receiver_id == receiver_id)) |
+        ((Friendship.requester_id == receiver_id) & (Friendship.receiver_id == requester_id))
+    ).first()
+    if existing:
+        return jsonify({'status': 'fail', 'message': 'Запрос уже отправлен или вы уже друзья'}), 400
+    fr = Friendship(requester_id=requester_id, receiver_id=receiver_id, status='pending')
+    db.session.add(fr)
+    db.session.commit()
+    return jsonify({'status': 'success', 'message': 'Запрос в друзья отправлен', 'friend_request_id': fr.id})
+
+
+@app.route('/friend_requests/<int:user_id>', methods=['GET'])
+def get_friend_requests(user_id):
+    requests = Friendship.query.filter_by(receiver_id=user_id, status='pending').all()
+    result = [{'id': fr.id, 'requester_id': fr.requester_id, 'receiver_id': fr.receiver_id, 'status': fr.status} for fr in requests]
+    return jsonify(result)
+
+
+@app.route('/friend_request/confirm', methods=['POST'])
+def confirm_friend_request():
+    data = request.json
+    friend_request_id = data.get('friend_request_id')
+    if not friend_request_id:
+        return jsonify({'status': 'fail', 'message': 'Не указан ID запроса'}), 400
+    fr = Friendship.query.get(friend_request_id)
+    if not fr or fr.status != 'pending':
+        return jsonify({'status': 'fail', 'message': 'Запрос не найден или уже обработан'}), 404
+    fr.status = 'accepted'
+    db.session.commit()
+    return jsonify({'status': 'success', 'message': 'Запрос подтвержден'})
+
+
+@app.route('/friend_request/reject', methods=['POST'])
+def reject_friend_request():
+    data = request.json
+    friend_request_id = data.get('friend_request_id')
+    if not friend_request_id:
+        return jsonify({'status': 'fail', 'message': 'Не указан ID запроса'}), 400
+    fr = Friendship.query.get(friend_request_id)
+    if not fr or fr.status != 'pending':
+        return jsonify({'status': 'fail', 'message': 'Запрос не найден или уже обработан'}), 404
+    db.session.delete(fr)
+    db.session.commit()
+    return jsonify({'status': 'success', 'message': 'Запрос отклонен'})
+
+
+@app.route('/friends/<int:user_id>', methods=['GET'])
+def get_friends(user_id):
+    friendships = Friendship.query.filter(
+        ((Friendship.requester_id == user_id) | (Friendship.receiver_id == user_id)) &
+        (Friendship.status == 'accepted')
+    ).all()
+    friends = []
+    for fr in friendships:
+        friend_id = fr.receiver_id if fr.requester_id == user_id else fr.requester_id
+        friend = User.query.get(friend_id)
+        if friend:
+            friends.append({'id': friend.id, 'username': friend.username})
+    return jsonify(friends)
+
+
+@app.route('/friendship', methods=['DELETE'])
+def remove_friendship():
+    user_id = request.args.get('user_id', type=int)
+    friend_id = request.args.get('friend_id', type=int)
+    if not user_id or not friend_id:
+        return jsonify({'status': 'fail', 'message': 'Не указан один из ID'}), 400
+    fr = Friendship.query.filter(
+        ((Friendship.requester_id == user_id) & (Friendship.receiver_id == friend_id)) |
+        ((Friendship.requester_id == friend_id) & (Friendship.receiver_id == user_id))
+    ).filter(Friendship.status == 'accepted').first()
+    if not fr:
+        return jsonify({'status': 'fail', 'message': 'Дружба не найдена'}), 404
+    db.session.delete(fr)
+    db.session.commit()
+    return jsonify({'status': 'success', 'message': 'Дружба удалена'})
+
+
+@app.route('/search_users', methods=['GET'])
+def search_users():
+    query = request.args.get('q', '')
+    if query:
+        users = User.query.filter(User.username.contains(query)).all()
+    else:
+        users = []
+    result = [{'id': u.id, 'username': u.username} for u in users]
+    return jsonify(result)
+
+
+# ------------------- CHAT ROUTES -------------------
 @app.route('/create_chat', methods=['POST'])
 def create_chat():
     data = request.json
@@ -120,7 +256,6 @@ def create_chat():
     return jsonify({'status': 'success', 'chat_id': chat.id})
 
 
-# ------------------- СПИСОК ЧАТОВ ДЛЯ ПОЛЬЗОВАТЕЛЯ -------------------
 @app.route('/user_chats/<int:user_id>', methods=['GET'])
 def get_user_chats(user_id):
     chat_users = ChatUser.query.filter_by(user_id=user_id).all()
@@ -136,34 +271,22 @@ def get_user_chats(user_id):
     return jsonify(chats)
 
 
-# ------------------- ИСТОРИЯ СООБЩЕНИЙ (С УЧЁТОМ УДАЛЕНИЯ) -------------------
 @app.route('/messages/<int:chat_id>', methods=['GET'])
 def get_messages(chat_id):
-    """
-    Фронтенд передаёт user_id, чтобы мы могли исключать сообщения,
-    удалённые "для себя" этим пользователем.
-    GET /messages/<chat_id>?user_id=XXX
-    Можно также ?q=keyword для поиска по содержимому.
-    """
     user_id = request.args.get('user_id', type=int)
     keyword = request.args.get('q', '')
-
     query = Message.query.filter(
         Message.chat_id == chat_id,
-        Message.deleted_for_all == False  # исключаем "удалённые для всех"
+        Message.deleted_for_all == False
     )
     if keyword:
         query = query.filter(Message.content.contains(keyword))
-
-    # исключаем те, которые этот пользователь удалил "только у себя"
     if user_id:
         deleted_ids = DeletedMessage.query.filter_by(user_id=user_id).all()
         deleted_ids_list = [dm.message_id for dm in deleted_ids]
         if deleted_ids_list:
             query = query.filter(~Message.id.in_(deleted_ids_list))
-
     messages = query.order_by(Message.timestamp).all()
-
     result = []
     for msg in messages:
         result.append({
@@ -173,13 +296,12 @@ def get_messages(chat_id):
             'content': msg.content,
             'timestamp': msg.timestamp.isoformat(),
             'media_filename': msg.media_filename,
-            'reply_to_id': msg.reply_to_id,         # <-- чтобы фронт знал, что это ответ
-            'forwarded_from_id': msg.forwarded_from_id  # <-- чтобы фронт знал, от кого переслали
+            'reply_to_id': msg.reply_to_id,
+            'forwarded_from_id': msg.forwarded_from_id
         })
     return jsonify(result)
 
 
-# ------------------- ЗАГРУЗКА МЕДИАФАЙЛОВ -------------------
 @app.route('/upload', methods=['POST'])
 def upload():
     if 'file' not in request.files:
@@ -191,89 +313,47 @@ def upload():
     file.save(filepath)
     return jsonify({'status': 'success', 'filename': file.filename})
 
+
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
-# ------------------- ДОП. ДАННЫЕ ДЛЯ ПРОФИЛЯ -------------------
-@app.route('/profile_data/<int:user_id>', methods=['GET'])
-def get_profile_data(user_id):
-    chats_count = ChatUser.query.filter_by(user_id=user_id).count()
-    messages_count = Message.query.filter_by(sender_id=user_id).count()
-    docs_messages = Message.query.filter_by(sender_id=user_id) \
-        .filter(Message.media_filename.isnot(None)).all()
-    docs = [msg.media_filename for msg in docs_messages]
-    return jsonify({
-        'chats_count': chats_count,
-        'messages_count': messages_count,
-        'docs': docs
-    })
-
-
-# ------------------- УДАЛЕНИЕ СООБЩЕНИЯ (для себя или для всех) -------------------
 @app.route('/messages/<int:message_id>', methods=['DELETE'])
 def delete_message(message_id):
-    """
-    DELETE /messages/<msg_id>?mode=everyone&user_id=XX    -> Удалить для всех
-    DELETE /messages/<msg_id>?mode=me&user_id=XX          -> Удалить только у себя
-    """
     mode = request.args.get('mode')
     user_id = request.args.get('user_id', type=int)
     if not user_id:
         return jsonify({'status': 'fail', 'message': 'Не указан user_id'}), 400
-
     message = Message.query.get(message_id)
     if not message:
         return jsonify({'status': 'fail', 'message': 'Сообщение не найдено'}), 404
-
     if mode == 'everyone':
-        # "Удаляем" для всех (помечаем deleted_for_all = True)
         message.deleted_for_all = True
         db.session.commit()
-        # Шлём событие, чтобы все клиенты убрали сообщение
-        socketio.emit('message_deleted_for_all', {
-            'message_id': message_id
-        }, room=str(message.chat_id))
+        socketio.emit('message_deleted_for_all', {'message_id': message_id}, room=str(message.chat_id))
         return jsonify({'status': 'success', 'message': 'Сообщение удалено для всех'})
     else:
-        # Удаляем только у себя – добавляем запись в DeletedMessage
         deleted_entry = DeletedMessage.query.filter_by(message_id=message_id, user_id=user_id).first()
         if not deleted_entry:
             deleted_entry = DeletedMessage(message_id=message_id, user_id=user_id)
             db.session.add(deleted_entry)
             db.session.commit()
-        # Шлём событие "message_deleted_for_user", пусть фронт решает, убирать ли сообщение
-        socketio.emit('message_deleted_for_user', {
-            'message_id': message_id,
-            'user_id': user_id
-        }, room=str(message.chat_id))
+        socketio.emit('message_deleted_for_user', {'message_id': message_id, 'user_id': user_id}, room=str(message.chat_id))
         return jsonify({'status': 'success', 'message': 'Сообщение удалено только для вас'})
 
 
-# ------------------- ПЕРЕСЫЛКА СООБЩЕНИЯ -------------------
 @app.route('/forward_message', methods=['POST'])
 def forward_message():
-    """
-    {
-      "message_id": 15,
-      "to_chat_id": 20,
-      "user_id": 100
-    }
-    """
     data = request.json
     from_message_id = data.get('message_id')
     to_chat_id = data.get('to_chat_id')
     user_id = data.get('user_id')
-
     if not (from_message_id and to_chat_id and user_id):
         return jsonify({'status': 'fail', 'message': 'Не хватает параметров'}), 400
-
     old_msg = Message.query.get(from_message_id)
     if not old_msg:
         return jsonify({'status': 'fail', 'message': 'Исходное сообщение не найдено'}), 404
-
-    # Создаём новое сообщение, копируем текст/файл, но указываем forwarded_from_id
     new_msg = Message(
         chat_id=to_chat_id,
         sender_id=user_id,
@@ -283,7 +363,6 @@ def forward_message():
     )
     db.session.add(new_msg)
     db.session.commit()
-
     socketio.emit('receive_message', {
         'id': new_msg.id,
         'chat_id': new_msg.chat_id,
@@ -294,14 +373,70 @@ def forward_message():
         'reply_to_id': new_msg.reply_to_id,
         'forwarded_from_id': new_msg.forwarded_from_id
     }, room=str(to_chat_id))
-
     return jsonify({'status': 'success', 'message': 'Сообщение переслано', 'new_message_id': new_msg.id})
 
 
-# ------------------- WEBSOCKET СОБЫТИЯ -------------------
+# ------------------- CALL HISTORY ROUTES -------------------
+@app.route('/call_history', methods=['POST'])
+def add_call_history():
+    data = request.json
+    try:
+        caller_id = data['caller_id']
+        call_type = data['call_type']
+        participants = data.get('participants', '')
+        start_time = datetime.fromisoformat(data['start_time'])
+        end_time = datetime.fromisoformat(data['end_time'])
+        duration = int((end_time - start_time).total_seconds())
+    except Exception as e:
+        return jsonify({'status': 'fail', 'message': f'Ошибка обработки данных: {str(e)}'}), 400
+    record = CallHistory(
+        caller_id=caller_id,
+        call_type=call_type,
+        participants=participants,
+        start_time=start_time,
+        end_time=end_time,
+        duration=duration
+    )
+    db.session.add(record)
+    db.session.commit()
+    return jsonify({'status': 'success', 'message': 'Запись звонка добавлена'})
+
+
+@app.route('/call_history/<int:user_id>', methods=['GET'])
+def get_call_history(user_id):
+    pattern = f'%,{user_id},%'
+    records = CallHistory.query.filter(
+        (CallHistory.caller_id == user_id) | (CallHistory.participants.like(pattern))
+    ).order_by(CallHistory.start_time.desc()).all()
+    result = []
+    for rec in records:
+        caller = User.query.get(rec.caller_id)
+        caller_username = caller.username if caller else "Неизвестно"
+        recipient_usernames = []
+        if rec.participants:
+            participant_ids = rec.participants.strip(',').split(',')
+            for pid in participant_ids:
+                u = User.query.get(int(pid))
+                if u:
+                    recipient_usernames.append(u.username)
+        result.append({
+            'id': rec.id,
+            'caller_id': rec.caller_id,
+            'caller_username': caller_username,
+            'call_type': rec.call_type,
+            'recipients': recipient_usernames,
+            'start_time': rec.start_time.strftime("%Y-%m-%d %H:%M"),
+            'end_time': rec.end_time.strftime("%Y-%m-%d %H:%M"),
+            'duration': rec.duration
+        })
+    return jsonify(result)
+
+
+# ------------------- WEBSOCKET EVENTS -------------------
 @socketio.on('connect')
 def handle_connect():
     emit('status', {'message': 'Подключено'})
+
 
 @socketio.on('join')
 def handle_join(data):
@@ -310,6 +445,7 @@ def handle_join(data):
     join_room(str(chat_id))
     emit('status', {'message': f"{username} вошёл в чат {chat_id}"}, room=str(chat_id))
 
+
 @socketio.on('leave')
 def handle_leave(data):
     chat_id = data['chat_id']
@@ -317,18 +453,14 @@ def handle_leave(data):
     leave_room(str(chat_id))
     emit('status', {'message': f"{username} покинул(а) чат {chat_id}"}, room=str(chat_id))
 
+
 @socketio.on('send_message')
 def handle_send_message(data):
-    """
-    При отправке нового сообщения через сокет можно указать:
-      chat_id, sender_id, content, media_filename, reply_to_id
-    """
     chat_id = data['chat_id']
     sender_id = data['sender_id']
     content = data.get('content', '')
     media_filename = data.get('media_filename')
-    reply_to_id = data.get('reply_to_id')  # Может быть None
-
+    reply_to_id = data.get('reply_to_id')
     msg = Message(
         chat_id=chat_id,
         sender_id=sender_id,
@@ -338,7 +470,6 @@ def handle_send_message(data):
     )
     db.session.add(msg)
     db.session.commit()
-
     emit('receive_message', {
         'id': msg.id,
         'chat_id': msg.chat_id,
@@ -347,20 +478,12 @@ def handle_send_message(data):
         'timestamp': msg.timestamp.isoformat(),
         'media_filename': msg.media_filename,
         'reply_to_id': msg.reply_to_id,
-        'forwarded_from_id': msg.forwarded_from_id  # будет None, если не пересылали
+        'forwarded_from_id': msg.forwarded_from_id
     }, room=str(chat_id))
 
 
 @socketio.on('send_reaction')
 def handle_send_reaction(data):
-    """
-    data = {
-      'chat_id': ...,
-      'message_id': ...,
-      'user_id': ...,
-      'reaction': ...
-    }
-    """
     reaction = Reaction(
         message_id=data['message_id'],
         user_id=data['user_id'],
@@ -368,12 +491,12 @@ def handle_send_reaction(data):
     )
     db.session.add(reaction)
     db.session.commit()
-
     emit('receive_reaction', {
         'message_id': data['message_id'],
         'user_id': data['user_id'],
         'reaction': data['reaction']
     }, room=str(data['chat_id']))
+
 
 @socketio.on('update_notification')
 def handle_update_notification(data):
@@ -390,7 +513,50 @@ def handle_update_notification(data):
             'notifications_enabled': data['notifications_enabled']
         }, room=str(data['chat_id']))
 
-# ------------------- ЗАПУСК -------------------
+
+# ------------- WEBRTC / CALL SIGNALING EVENTS -------------
+@socketio.on('register_user')
+def handle_register_user(data):
+    user_id = data.get('user_id')
+    if user_id:
+        join_room(str(user_id))
+
+
+@socketio.on('initiate_call')
+def handle_initiate_call(data):
+    targets = data.get('targets', [])
+    for target in targets:
+        socketio.emit('incoming_call', data, room=str(target))
+
+
+@socketio.on('webrtc_offer')
+def handle_webrtc_offer(data):
+    target = data.get('to')
+    if target:
+        socketio.emit('webrtc_offer', data, room=str(target))
+
+
+@socketio.on('webrtc_answer')
+def handle_webrtc_answer(data):
+    target = data.get('to')
+    if target:
+        socketio.emit('webrtc_answer', data, room=str(target))
+
+
+@socketio.on('webrtc_candidate')
+def handle_webrtc_candidate(data):
+    target = data.get('to')
+    if target:
+        socketio.emit('webrtc_candidate', data, room=str(target))
+
+
+@socketio.on('end_call')
+def handle_end_call(data):
+    targets = data.get('targets', [])
+    for target in targets:
+        socketio.emit('end_call', data, room=str(target))
+# ------------- END OF SIGNALING EVENTS -------------
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
