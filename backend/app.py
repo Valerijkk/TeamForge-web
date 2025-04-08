@@ -1,65 +1,92 @@
-import eventlet
-eventlet.monkey_patch()
+import eventlet                     # Импорт eventlet для поддержки асинхронных операций
+eventlet.monkey_patch()             # Применение monkey patch для работы с асинхронностью
 
 from flask import Flask, request, jsonify, send_from_directory
-from flask_sqlalchemy import SQLAlchemy
+# Импорт основных функций Flask
+
+from flask_sqlalchemy import SQLAlchemy   # Для работы с базой данных через ORM
 from flask_socketio import SocketIO, emit, join_room, leave_room
-from flask_cors import CORS
+# Для работы с WebSocket (сокетами)
+from flask_cors import CORS                # Для поддержки запросов из других доменов
 from werkzeug.security import generate_password_hash, check_password_hash
-import os
-from datetime import datetime, date
+# Для безопасного хранения паролей
 
+import os                                  # Для работы с файловой системой (например, создание директорий)
+from datetime import datetime, date          # Для работы с датами и временем
+
+# Для отправки email и сброса пароля:
+from flask_mail import Mail, Message as MailMessage
+# Импортируем Mail и переименовываем Message в MailMessage, чтобы не конфликтовать с нашей моделью Message
+from itsdangerous import URLSafeTimedSerializer
+# Для генерации безопасных токенов с ограниченным временем жизни
+
+# Инициализация приложения Flask
 app = Flask(__name__)
-CORS(app)
+CORS(app)  # Разрешаем кросс-доменные запросы
 
+# Конфигурация приложения
 app.config['SECRET_KEY'] = 'secret!'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///teamforge.db'
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)  # Создаем папку для загрузки файлов, если её нет
 
+# Настройки для Flask-Mail
+app.config['MAIL_SERVER'] = 'smtp.mail.ru'
+app.config['MAIL_PORT'] = 465
+app.config['MAIL_USE_SSL'] = True
+app.config['MAIL_USE_TLS'] = False
+app.config['MAIL_USERNAME'] = 'valerich.tv.88@mail.ru'
+app.config['MAIL_PASSWORD'] = 'nM2bxy56cby8TwA4cx3E'
+app.config['MAIL_DEFAULT_SENDER'] = 'valerich.tv.88@mail.ru'
+
+# Инициализируем расширения: ORM, сокеты и почту
 db = SQLAlchemy(app)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
+mail = Mail(app)
 
+# Создание сериализатора для токенов сброса пароля (использует SECRET_KEY)
+ts = URLSafeTimedSerializer(app.config["SECRET_KEY"])
 
 # ------------------- MODELS -------------------
+# Модель пользователя
 class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
+    id = db.Column(db.Integer, primary_key=True)  # Первичный ключ
+    username = db.Column(db.String(80), unique=True, nullable=False)  # Уникальное имя пользователя
+    password_hash = db.Column(db.String(128), nullable=False)           # Хэш пароля
 
-
+# Модель чата
 class Chat(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), nullable=False)
-    is_group = db.Column(db.Boolean, default=False)
+    is_group = db.Column(db.Boolean, default=False)  # Флаг, указывающий, является ли чат групповым
 
-
+# Модель связи пользователя и чата
 class ChatUser(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     chat_id = db.Column(db.Integer, db.ForeignKey('chat.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     notifications_enabled = db.Column(db.Boolean, default=True)
 
-
+# Модель сообщения (для общения в чатах)
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     chat_id = db.Column(db.Integer, db.ForeignKey('chat.id'), nullable=False)
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    content = db.Column(db.Text)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    media_filename = db.Column(db.String(120), nullable=True)
+    content = db.Column(db.Text)  # Текстовое содержание сообщения
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)  # Время отправки
+    media_filename = db.Column(db.String(120), nullable=True)  # Имя файла для медиа (если прикреплено)
     deleted_for_all = db.Column(db.Boolean, default=False)
-    reply_to_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)
-    forwarded_from_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    reply_to_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)  # Сообщение, на которое отвечаем
+    forwarded_from_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Если сообщение переслано
 
-
+# Модель реакции (например, лайки, эмоции) на сообщения
 class Reaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     reaction = db.Column(db.String(20), nullable=False)
 
-
+# Модель для хранения информации об удалённых у пользователя сообщениях
 class DeletedMessage(db.Model):
     """
     Хранит информацию о том, какие сообщения пользователь удалил "у себя".
@@ -68,37 +95,33 @@ class DeletedMessage(db.Model):
     message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-
-# Модель для системы друзей
+# Модель дружбы
 class Friendship(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     requester_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    status = db.Column(db.String(20), default='pending')  # pending, accepted
+    status = db.Column(db.String(20), default='pending')  # Статусы: pending, accepted
 
-
-# Модель для истории звонков
+# Модель истории звонков
 class CallHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     caller_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    call_type = db.Column(db.String(20), nullable=False)  # personal или group
-    # Участников храним как строку с запятыми, например: ",2,3,"
+    call_type = db.Column(db.String(20), nullable=False)  # Личный или групповой звонок
+    # Участников сохраняем как строку с запятыми, например: ",2,3,"
     participants = db.Column(db.String(200))
     start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=False)
-    duration = db.Column(db.Integer, nullable=False)  # в секундах
+    duration = db.Column(db.Integer, nullable=False)  # Длительность звонка в секундах
 
-
-# Модель для задач (календарь)
+# Модель задач (для календаря и планирования)
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text, nullable=True)
-    due_date = db.Column(db.Date, nullable=False)
+    due_date = db.Column(db.Date, nullable=False)  # Дата выполнения задачи
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-
-# Новая модель для программного обеспечения (ПО)
+# Модель программного обеспечения (ПО)
 class Software(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(120), nullable=False)
@@ -106,13 +129,27 @@ class Software(db.Model):
     image_url = db.Column(db.String(255), nullable=True)
     github_url = db.Column(db.String(255), nullable=True)
 
+# ------------------- ФУНКЦИИ ДЛЯ СБРОСА ПАРОЛЯ -------------------
+def generate_confirmation_token(email):
+    """Генерирует токен для сброса пароля на основе email."""
+    return ts.dumps(email, salt='password-reset-salt')
+
+def confirm_token(token, expiration=3600):
+    """Подтверждает токен и возвращает email, если токен действителен (по умолчанию 3600 секунд)."""
+    try:
+        email = ts.loads(token, salt="password-reset-salt", max_age=expiration)
+    except Exception as e:
+        return None
+    return email
 
 # ------------------- AUTH ROUTES -------------------
 @app.route('/register', methods=['POST'])
 def register():
-    data = request.json
+    data = request.json  # Получаем данные из запроса
+    # Проверяем, существует ли уже пользователь с таким именем
     if User.query.filter_by(username=data['username']).first():
         return jsonify({'status': 'fail', 'message': 'Имя пользователя уже занято'}), 400
+    # Создаем пользователя с хэшированным паролем
     user = User(
         username=data['username'],
         password_hash=generate_password_hash(data['password'])
@@ -121,15 +158,71 @@ def register():
     db.session.commit()
     return jsonify({'status': 'success', 'message': 'Пользователь успешно зарегистрирован'})
 
-
 @app.route('/login', methods=['POST'])
 def login():
-    data = request.json
-    user = User.query.filter_by(username=data['username']).first()
+    data = request.json  # Получаем данные из запроса
+    user = User.query.filter_by(username=data['username']).first()  # Находим пользователя по имени
+    # Проверяем, совпадает ли пароль
     if user and check_password_hash(user.password_hash, data['password']):
         return jsonify({'status': 'success', 'user_id': user.id})
     return jsonify({'status': 'fail', 'message': 'Неверные логин или пароль'}), 401
 
+# ------------------- RESET PASSWORD ROUTES -------------------
+@app.route('/reset-password', methods=['POST'])
+def reset_password():
+    # Получаем данные запроса в формате JSON
+    data = request.get_json()
+    email = data.get('email')
+    if not email:
+        print("Email не предоставлен для сброса пароля")
+        return jsonify({'message': 'Email обязателен'}), 400
+
+    # Здесь предполагаем, что username используется как email или добавьте поле email в модель User
+    user = User.query.filter_by(username=email).first()
+    if user:
+        token = generate_confirmation_token(email)
+        reset_url = f'http://localhost:3000/reset-password-confirm/{token}'
+        # Формируем письмо для сброса пароля
+        msg = MailMessage(
+            subject='Сброс пароля',
+            sender=app.config['MAIL_DEFAULT_SENDER'],
+            recipients=[email]
+        )
+        msg.body = f'Для сброса пароля перейдите по ссылке: {reset_url}'
+        try:
+            mail.send(msg)
+            print(f"Письмо для сброса пароля отправлено на {email}")
+        except Exception as e:
+            print(f"Ошибка отправки письма: {e}")
+            return jsonify({'message': 'Ошибка отправки письма'}), 500
+    # Возвращаем успешный ответ, чтобы не раскрывать информацию о существовании email
+    return jsonify({'message': 'Инструкции по сбросу пароля отправлены на вашу почту'}), 200
+
+@app.route('/reset-password-confirm/<token>', methods=['POST'])
+def reset_password_confirm(token):
+    data = request.get_json()
+    password = data.get('password')
+    password_confirm = data.get('password_confirm')
+    if not password or not password_confirm:
+        print("Пароль или подтверждение не предоставлены")
+        return jsonify({'message': 'Пароль и подтверждение обязательны'}), 400
+    if password != password_confirm:
+        print("Пароли не совпадают")
+        return jsonify({'message': 'Пароли не совпадают'}), 400
+    email = confirm_token(token)
+    if not email:
+        print("Неверный или устаревший токен")
+        return jsonify({'message': 'Ссылка для сброса пароля недействительна или истекла'}), 400
+    user = User.query.filter_by(username=email).first()  # Если email хранится как username
+    if not user:
+        print("Пользователь не найден")
+        return jsonify({'message': 'Пользователь не найден'}), 404
+
+    # Обновляем пароль пользователя
+    user.password_hash = generate_password_hash(password)
+    db.session.commit()
+    print(f"Пароль для пользователя {user.username} сброшен")
+    return jsonify({'message': 'Пароль успешно сброшен'}), 200
 
 # ------------------- USER ROUTES -------------------
 @app.route('/users', methods=['GET'])
@@ -137,7 +230,6 @@ def get_users():
     users = User.query.all()
     result = [{'id': u.id, 'username': u.username} for u in users]
     return jsonify(result)
-
 
 @app.route('/profile_data/<int:user_id>', methods=['GET'])
 def get_profile_data(user_id):
@@ -150,7 +242,6 @@ def get_profile_data(user_id):
         'messages_count': messages_count,
         'docs': docs
     })
-
 
 # ------------------- FRIENDSHIP ROUTES -------------------
 @app.route('/friend_request', methods=['POST'])
@@ -173,13 +264,11 @@ def send_friend_request():
     db.session.commit()
     return jsonify({'status': 'success', 'message': 'Запрос в друзья отправлен', 'friend_request_id': fr.id})
 
-
 @app.route('/friend_requests/<int:user_id>', methods=['GET'])
 def get_friend_requests(user_id):
     requests = Friendship.query.filter_by(receiver_id=user_id, status='pending').all()
     result = [{'id': fr.id, 'requester_id': fr.requester_id, 'receiver_id': fr.receiver_id, 'status': fr.status} for fr in requests]
     return jsonify(result)
-
 
 @app.route('/friend_request/confirm', methods=['POST'])
 def confirm_friend_request():
@@ -194,7 +283,6 @@ def confirm_friend_request():
     db.session.commit()
     return jsonify({'status': 'success', 'message': 'Запрос подтвержден'})
 
-
 @app.route('/friend_request/reject', methods=['POST'])
 def reject_friend_request():
     data = request.json
@@ -207,7 +295,6 @@ def reject_friend_request():
     db.session.delete(fr)
     db.session.commit()
     return jsonify({'status': 'success', 'message': 'Запрос отклонен'})
-
 
 @app.route('/friends/<int:user_id>', methods=['GET'])
 def get_friends(user_id):
@@ -222,7 +309,6 @@ def get_friends(user_id):
         if friend:
             friends.append({'id': friend.id, 'username': friend.username})
     return jsonify(friends)
-
 
 @app.route('/friendship', methods=['DELETE'])
 def remove_friendship():
@@ -240,7 +326,6 @@ def remove_friendship():
     db.session.commit()
     return jsonify({'status': 'success', 'message': 'Дружба удалена'})
 
-
 @app.route('/search_users', methods=['GET'])
 def search_users():
     query = request.args.get('q', '')
@@ -250,7 +335,6 @@ def search_users():
         users = []
     result = [{'id': u.id, 'username': u.username} for u in users]
     return jsonify(result)
-
 
 # ------------------- CHAT ROUTES -------------------
 @app.route('/create_chat', methods=['POST'])
@@ -269,7 +353,6 @@ def create_chat():
     db.session.commit()
     return jsonify({'status': 'success', 'chat_id': chat.id})
 
-
 @app.route('/user_chats/<int:user_id>', methods=['GET'])
 def get_user_chats(user_id):
     chat_users = ChatUser.query.filter_by(user_id=user_id).all()
@@ -280,7 +363,6 @@ def get_user_chats(user_id):
             chats.append({'id': chat.id, 'name': chat.name, 'is_group': chat.is_group})
     return jsonify(chats)
 
-
 @app.route('/messages/<int:chat_id>', methods=['GET'])
 def get_messages(chat_id):
     user_id = request.args.get('user_id', type=int)
@@ -288,7 +370,7 @@ def get_messages(chat_id):
     query = Message.query.filter(Message.chat_id == chat_id, Message.deleted_for_all == False)
     if keyword:
         query = query.filter(Message.content.contains(keyword))
-    if user_id:
+    if (user_id):
         deleted_ids = DeletedMessage.query.filter_by(user_id=user_id).all()
         deleted_ids_list = [dm.message_id for dm in deleted_ids]
         if deleted_ids_list:
@@ -308,7 +390,6 @@ def get_messages(chat_id):
         })
     return jsonify(result)
 
-
 @app.route('/upload', methods=['POST'])
 def upload():
     if 'file' not in request.files:
@@ -320,11 +401,9 @@ def upload():
     file.save(filepath)
     return jsonify({'status': 'success', 'filename': file.filename})
 
-
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
 
 @app.route('/messages/<int:message_id>', methods=['DELETE'])
 def delete_message(message_id):
@@ -348,7 +427,6 @@ def delete_message(message_id):
             db.session.commit()
         socketio.emit('message_deleted_for_user', {'message_id': message_id, 'user_id': user_id}, room=str(message.chat_id))
         return jsonify({'status': 'success', 'message': 'Сообщение удалено только для вас'})
-
 
 @app.route('/forward_message', methods=['POST'])
 def forward_message():
@@ -382,7 +460,6 @@ def forward_message():
     }, room=str(to_chat_id))
     return jsonify({'status': 'success', 'message': 'Сообщение переслано', 'new_message_id': new_msg.id})
 
-
 # ------------------- CALL HISTORY ROUTES -------------------
 @app.route('/call_history', methods=['POST'])
 def add_call_history():
@@ -407,7 +484,6 @@ def add_call_history():
     db.session.add(record)
     db.session.commit()
     return jsonify({'status': 'success', 'message': 'Запись звонка добавлена'})
-
 
 @app.route('/call_history/<int:user_id>', methods=['GET'])
 def get_call_history(user_id):
@@ -441,7 +517,6 @@ def get_call_history(user_id):
         })
     return jsonify(result)
 
-
 # ------------------- TASK (Календарь/Задачи) ROUTES -------------------
 @app.route('/tasks', methods=['GET'])
 def get_tasks():
@@ -465,7 +540,6 @@ def get_tasks():
         })
     return jsonify(result)
 
-
 @app.route('/tasks', methods=['POST'])
 def create_task():
     data = request.json
@@ -486,7 +560,6 @@ def create_task():
     db.session.commit()
     return jsonify({'status': 'success', 'message': 'Задача создана', 'task_id': task.id})
 
-
 @app.route('/tasks/<int:task_id>', methods=['PUT'])
 def update_task(task_id):
     task = Task.query.get(task_id)
@@ -504,7 +577,6 @@ def update_task(task_id):
     db.session.commit()
     return jsonify({'status': 'success', 'message': 'Задача обновлена'})
 
-
 @app.route('/tasks/<int:task_id>', methods=['DELETE'])
 def delete_task(task_id):
     task = Task.query.get(task_id)
@@ -514,10 +586,7 @@ def delete_task(task_id):
     db.session.commit()
     return jsonify({'status': 'success', 'message': 'Задача удалена'})
 
-
 # ------------------- SOFTWARE (Программное обеспечение) ROUTES -------------------
-# Модель Software определена выше
-
 @app.route('/software', methods=['GET'])
 def get_software():
     softwares = Software.query.all()
@@ -531,7 +600,6 @@ def get_software():
             'github_url': sw.github_url
         })
     return jsonify(result)
-
 
 @app.route('/software', methods=['POST'])
 def create_software():
@@ -552,7 +620,6 @@ def create_software():
     db.session.commit()
     return jsonify({'status': 'success', 'message': 'Программное обеспечение создано', 'software_id': sw.id})
 
-
 @app.route('/software/<int:software_id>', methods=['PUT'])
 def update_software(software_id):
     data = request.json
@@ -568,7 +635,6 @@ def update_software(software_id):
     db.session.commit()
     return jsonify({'status': 'success', 'message': 'Запись обновлена'})
 
-
 @app.route('/software/<int:software_id>', methods=['DELETE'])
 def delete_software(software_id):
     data = request.json
@@ -581,12 +647,10 @@ def delete_software(software_id):
     db.session.commit()
     return jsonify({'status': 'success', 'message': 'Запись удалена'})
 
-
 # ------------------- WEBSOCKET EVENTS -------------------
 @socketio.on('connect')
 def handle_connect():
     emit('status', {'message': 'Подключено'})
-
 
 @socketio.on('join')
 def handle_join(data):
@@ -595,14 +659,12 @@ def handle_join(data):
     join_room(str(chat_id))
     emit('status', {'message': f"{username} вошёл в чат {chat_id}"}, room=str(chat_id))
 
-
 @socketio.on('leave')
 def handle_leave(data):
     chat_id = data['chat_id']
     username = data.get('username', 'Аноним')
     leave_room(str(chat_id))
     emit('status', {'message': f"{username} покинул(а) чат {chat_id}"}, room=str(chat_id))
-
 
 @socketio.on('send_message')
 def handle_send_message(data):
@@ -631,7 +693,6 @@ def handle_send_message(data):
         'forwarded_from_id': msg.forwarded_from_id
     }, room=str(chat_id))
 
-
 @socketio.on('send_reaction')
 def handle_send_reaction(data):
     reaction = Reaction(
@@ -647,7 +708,6 @@ def handle_send_reaction(data):
         'reaction': data['reaction']
     }, room=str(data['chat_id']))
 
-
 @socketio.on('update_notification')
 def handle_update_notification(data):
     chat_user = ChatUser.query.filter_by(chat_id=data['chat_id'], user_id=data['user_id']).first()
@@ -660,7 +720,6 @@ def handle_update_notification(data):
             'notifications_enabled': data['notifications_enabled']
         }, room=str(data['chat_id']))
 
-
 # ------------- WEBRTC / CALL SIGNALING EVENTS -------------
 @socketio.on('register_user')
 def handle_register_user(data):
@@ -668,13 +727,11 @@ def handle_register_user(data):
     if user_id:
         join_room(str(user_id))
 
-
 @socketio.on('initiate_call')
 def handle_initiate_call(data):
     targets = data.get('targets', [])
     for target in targets:
         socketio.emit('incoming_call', data, room=str(target))
-
 
 @socketio.on('webrtc_offer')
 def handle_webrtc_offer(data):
@@ -682,20 +739,17 @@ def handle_webrtc_offer(data):
     if target:
         socketio.emit('webrtc_offer', data, room=str(target))
 
-
 @socketio.on('webrtc_answer')
 def handle_webrtc_answer(data):
     target = data.get('to')
     if target:
         socketio.emit('webrtc_answer', data, room=str(target))
 
-
 @socketio.on('webrtc_candidate')
 def handle_webrtc_candidate(data):
     target = data.get('to')
     if target:
         socketio.emit('webrtc_candidate', data, room=str(target))
-
 
 @socketio.on('end_call')
 def handle_end_call(data):
@@ -706,5 +760,5 @@ def handle_end_call(data):
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()
-    socketio.run(app, debug=True)
+        db.create_all()   # Создаем все таблицы, если их еще нет
+    socketio.run(app, debug=True)  # Запускаем сервер с поддержкой сокетов
