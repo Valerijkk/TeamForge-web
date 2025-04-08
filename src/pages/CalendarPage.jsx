@@ -1,8 +1,7 @@
-// CalendarPage.jsx
 import React, { useState, useEffect } from 'react';
 import Calendar from 'react-calendar';
-import 'react-calendar/dist/Calendar.css';
-import './CalendarPage.css'; // Подключаем свой файл стилей (пример)
+import 'react-calendar/dist/Calendar.css';  // ← Здесь ваши стили календаря
+import './CalendarPage.css';               // ← Подключаем наши новые стили для остальной части
 
 function CalendarPage() {
     // Выбранная дата (по умолчанию сегодня)
@@ -14,7 +13,7 @@ function CalendarPage() {
         id: null,
         title: '',
         description: '',
-        due_date: new Date().toISOString().slice(0,10) // формат YYYY-MM-DD
+        due_date: new Date().toISOString().slice(0,10),
     });
     // Задачи на ближайшую неделю
     const [upcomingTasks, setUpcomingTasks] = useState([]);
@@ -23,25 +22,25 @@ function CalendarPage() {
     const fetchTasksForDate = () => {
         const dateStr = selectedDate.toISOString().slice(0,10);
         fetch(`http://localhost:5000/tasks?date=${dateStr}`)
-            .then(res => res.json())
-            .then(data => setTasks(data))
-            .catch(err => console.error(err));
+            .then((res) => res.json())
+            .then((data) => setTasks(data))
+            .catch((err) => console.error(err));
     };
 
     // Получаем все задачи и фильтруем те, что на ближайшую неделю
     const fetchUpcomingTasks = () => {
         fetch('http://localhost:5000/tasks')
-            .then(res => res.json())
-            .then(data => {
+            .then((res) => res.json())
+            .then((data) => {
                 const today = new Date();
-                const upcoming = data.filter(task => {
+                const upcoming = data.filter((task) => {
                     const taskDate = new Date(task.due_date);
                     const diffDays = (taskDate - today) / (1000 * 3600 * 24);
                     return diffDays >= 0 && diffDays <= 7;
                 });
                 setUpcomingTasks(upcoming);
             })
-            .catch(err => console.error(err));
+            .catch((err) => console.error(err));
     };
 
     useEffect(() => {
@@ -54,7 +53,6 @@ function CalendarPage() {
     const handleAddOrUpdate = () => {
         const dateStr = selectedDate.toISOString().slice(0,10);
 
-        // Если в formData есть id, значит редактируем
         if (formData.id) {
             // Редактирование (PUT /tasks/<id>)
             fetch(`http://localhost:5000/tasks/${formData.id}`, {
@@ -63,16 +61,16 @@ function CalendarPage() {
                 body: JSON.stringify({
                     title: formData.title,
                     description: formData.description,
-                    due_date: formData.due_date || dateStr
-                })
+                    due_date: formData.due_date || dateStr,
+                }),
             })
-                .then(res => res.json())
+                .then((res) => res.json())
                 .then(() => {
                     setFormData({ id: null, title: '', description: '', due_date: dateStr });
                     fetchTasksForDate();
                     fetchUpcomingTasks();
                 })
-                .catch(err => console.error(err));
+                .catch((err) => console.error(err));
         } else {
             // Создание новой задачи (POST /tasks)
             fetch('http://localhost:5000/tasks', {
@@ -81,16 +79,16 @@ function CalendarPage() {
                 body: JSON.stringify({
                     title: formData.title,
                     description: formData.description,
-                    due_date: formData.due_date || dateStr
-                })
+                    due_date: formData.due_date || dateStr,
+                }),
             })
-                .then(res => res.json())
+                .then((res) => res.json())
                 .then(() => {
                     setFormData({ id: null, title: '', description: '', due_date: dateStr });
                     fetchTasksForDate();
                     fetchUpcomingTasks();
                 })
-                .catch(err => console.error(err));
+                .catch((err) => console.error(err));
         }
     };
 
@@ -100,67 +98,94 @@ function CalendarPage() {
 
     const handleDelete = (taskId) => {
         fetch(`http://localhost:5000/tasks/${taskId}`, { method: 'DELETE' })
-            .then(res => res.json())
+            .then((res) => res.json())
             .then(() => {
                 fetchTasksForDate();
                 fetchUpcomingTasks();
             })
-            .catch(err => console.error(err));
+            .catch((err) => console.error(err));
     };
 
     return (
-        <div className="container">
-            <h2>Календарь задач</h2>
+        <div className="calendar-page container">
+            {/* Заголовок страницы */}
+            <h2 className="calendar-title">Календарь задач</h2>
+
+            {/* Сам календарь. Стили .my-react-calendar НЕ меняем */}
             <Calendar
                 className="my-react-calendar"
                 onChange={setSelectedDate}
                 value={selectedDate}
             />
-            <h3>Задачи на {selectedDate.toISOString().slice(0,10)}</h3>
+
+            {/* Блок задач на выбранную дату */}
+            <h3 className="tasks-subtitle">
+                Задачи на <span>{selectedDate.toISOString().slice(0, 10)}</span>
+            </h3>
             {tasks.length === 0 ? (
-                <p>Нет задач на выбранную дату.</p>
+                <p className="tasks-none">Нет задач на выбранную дату.</p>
             ) : (
-                <ul>
-                    {tasks.map(task => (
-                        <li key={task.id}>
-                            <strong>{task.title}</strong> – {task.description}
-                            <button onClick={() => handleEdit(task)}>Редактировать</button>
-                            <button onClick={() => handleDelete(task.id)}>Удалить</button>
+                <ul className="tasks-list">
+                    {tasks.map((task) => (
+                        <li key={task.id} className="task-item">
+                            <div className="task-item__info">
+                                <strong className="task-item__title">{task.title}</strong>
+                                <span className="task-item__desc"> – {task.description}</span>
+                            </div>
+                            <div className="task-item__buttons">
+                                <button onClick={() => handleEdit(task)}>Редактировать</button>
+                                <button onClick={() => handleDelete(task.id)}>Удалить</button>
+                            </div>
                         </li>
                     ))}
                 </ul>
             )}
-            <h3>{formData.id ? 'Редактировать задачу' : 'Добавить задачу'}</h3>
-            <div>
+
+            {/* Блок добавления / редактирования задачи */}
+            <h3 className="tasks-subtitle">
+                {formData.id ? 'Редактировать задачу' : 'Добавить задачу'}
+            </h3>
+            <div className="task-form">
                 <input
                     type="text"
                     placeholder="Название задачи"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                /><br/>
+                />
+                <br />
+
                 <textarea
                     placeholder="Описание задачи"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                /><br/>
-                <label>Дата выполнения: </label>
+                />
+                <br />
+
+                <label className="date-label">Дата выполнения: </label>
                 <input
                     type="date"
                     value={formData.due_date || selectedDate.toISOString().slice(0,10)}
                     onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                /><br/>
-                <button onClick={handleAddOrUpdate}>
+                />
+                <br />
+
+                <button className="btn-add-update" onClick={handleAddOrUpdate}>
                     {formData.id ? 'Обновить задачу' : 'Добавить задачу'}
                 </button>
             </div>
-            <h3>Задачи на ближайшую неделю</h3>
+
+            {/* Блок задач на ближайшую неделю */}
+            <h3 className="tasks-subtitle">Задачи на ближайшую неделю</h3>
             {upcomingTasks.length === 0 ? (
-                <p>Нет задач на ближайшую неделю.</p>
+                <p className="tasks-none">Нет задач на ближайшую неделю.</p>
             ) : (
-                <ul>
-                    {upcomingTasks.map(task => (
-                        <li key={task.id}>
-                            <strong>{task.title}</strong> (до {task.due_date})
+                <ul className="tasks-list">
+                    {upcomingTasks.map((task) => (
+                        <li key={task.id} className="task-item">
+                            <div className="task-item__info">
+                                <strong className="task-item__title">{task.title}</strong>
+                                <span className="task-item__desc"> (до {task.due_date})</span>
+                            </div>
                         </li>
                     ))}
                 </ul>
