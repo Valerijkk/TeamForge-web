@@ -12,45 +12,81 @@ function ProfilePage({ user, onLogout }) {
     const [searchResults, setSearchResults] = useState([]);
     const [callHistory, setCallHistory] = useState([]);
 
+    // Функции-загрузчики данных оборачиваются в useCallback, чтобы не создавать их заново
     const loadProfileData = useCallback(() => {
+        // Создаем флаг монтирования
+        let isMounted = true;
         fetch(`http://localhost:5000/profile_data/${user.id}`)
             .then(res => res.json())
             .then(data => {
-                setChatsCount(data.chats_count);
-                setMessagesCount(data.messages_count);
-                setDocs(data.docs);
-            });
+                if (isMounted) {
+                    setChatsCount(data.chats_count);
+                    setMessagesCount(data.messages_count);
+                    setDocs(data.docs);
+                }
+            })
+            .catch(error => console.error('Ошибка получения данных профиля:', error));
+
+        return () => { isMounted = false; };
     }, [user.id]);
 
     const loadFriends = useCallback(() => {
+        let isMounted = true;
         fetch(`http://localhost:5000/friends/${user.id}`)
             .then(res => res.json())
-            .then(data => setFriends(data));
+            .then(data => {
+                if (isMounted) setFriends(data);
+            })
+            .catch(error => console.error('Ошибка получения друзей:', error));
+
+        return () => { isMounted = false; };
     }, [user.id]);
 
     const loadFriendRequests = useCallback(() => {
+        let isMounted = true;
         fetch(`http://localhost:5000/friend_requests/${user.id}`)
             .then(res => res.json())
-            .then(data => setFriendRequests(data));
+            .then(data => {
+                if (isMounted) setFriendRequests(data);
+            })
+            .catch(error => console.error('Ошибка получения запросов в друзья:', error));
+
+        return () => { isMounted = false; };
     }, [user.id]);
 
     const loadCallHistory = useCallback(() => {
+        let isMounted = true;
         fetch(`http://localhost:5000/call_history/${user.id}`)
             .then(res => res.json())
-            .then(data => setCallHistory(data));
+            .then(data => {
+                if (isMounted) setCallHistory(data);
+            })
+            .catch(error => console.error('Ошибка получения истории звонков:', error));
+
+        return () => { isMounted = false; };
     }, [user.id]);
 
+    // useEffect запускается при загрузке и когда изменяется пользователь или его id
     useEffect(() => {
         if (!user) {
             navigate('/');
             return;
         }
-        loadProfileData();
-        loadFriends();
-        loadFriendRequests();
-        loadCallHistory();
+        // Монтирование: запускаем загрузку данных
+        const cleanupProfileData = loadProfileData();
+        const cleanupFriends = loadFriends();
+        const cleanupFriendReq = loadFriendRequests();
+        const cleanupCallHistory = loadCallHistory();
+        // Функция очистки
+        return () => {
+            cleanupProfileData();
+            cleanupFriends();
+            cleanupFriendReq();
+            cleanupCallHistory();
+        };
     }, [user, navigate, loadProfileData, loadFriends, loadFriendRequests, loadCallHistory]);
 
+    // Поиск пользователей для добавления в друзья
     const handleSearch = () => {
         if (searchQuery.trim() !== '') {
             fetch(`http://localhost:5000/search_users?q=${searchQuery}`)
@@ -58,12 +94,14 @@ function ProfilePage({ user, onLogout }) {
                 .then(data => {
                     const filtered = data.filter(u => u.id !== user.id && !friends.some(f => f.id === u.id));
                     setSearchResults(filtered);
-                });
+                })
+                .catch(error => console.error('Ошибка поиска пользователей:', error));
         } else {
             setSearchResults([]);
         }
     };
 
+    // Функция для отправки запроса на добавление друга
     const addFriend = (receiverId) => {
         const body = { requester_id: user.id, receiver_id: receiverId };
         fetch('http://localhost:5000/friend_request', {
@@ -73,10 +111,12 @@ function ProfilePage({ user, onLogout }) {
         })
             .then(res => res.json())
             .then(data => {
-                alert(data.message);
-            });
+                console.log('Ответ addFriend:', data.message);
+            })
+            .catch(error => console.error('Ошибка при добавлении в друзья:', error));
     };
 
+    // Функции подтверждения и отклонения входящих запросов в друзья
     const confirmFriendRequest = (friendRequestId) => {
         fetch('http://localhost:5000/friend_request/confirm', {
             method: 'POST',
@@ -85,10 +125,11 @@ function ProfilePage({ user, onLogout }) {
         })
             .then(res => res.json())
             .then(data => {
-                alert(data.message);
+                console.log('Ответ confirmFriendRequest:', data.message);
                 loadFriends();
                 loadFriendRequests();
-            });
+            })
+            .catch(error => console.error('Ошибка подтверждения запроса в друзья:', error));
     };
 
     const rejectFriendRequest = (friendRequestId) => {
@@ -99,20 +140,23 @@ function ProfilePage({ user, onLogout }) {
         })
             .then(res => res.json())
             .then(data => {
-                alert(data.message);
+                console.log('Ответ rejectFriendRequest:', data.message);
                 loadFriendRequests();
-            });
+            })
+            .catch(error => console.error('Ошибка отклонения запроса в друзья:', error));
     };
 
+    // Функция удаления друга
     const removeFriend = (friendId) => {
         fetch(`http://localhost:5000/friendship?user_id=${user.id}&friend_id=${friendId}`, {
             method: 'DELETE'
         })
             .then(res => res.json())
             .then(data => {
-                alert(data.message);
+                console.log('Ответ removeFriend:', data.message);
                 loadFriends();
-            });
+            })
+            .catch(error => console.error('Ошибка при удалении друга:', error));
     };
 
     return (
