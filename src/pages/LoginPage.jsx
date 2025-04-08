@@ -1,5 +1,6 @@
+// LoginPage.jsx
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 function LoginPage({ setUser }) {
     const [username, setUsername] = useState('');
@@ -8,7 +9,8 @@ function LoginPage({ setUser }) {
 
     const login = async () => {
         if (!username.trim() || !password.trim()) {
-            alert('Введите логин и пароль.');
+            // Можно использовать красивое уведомление вместо alert, например, toast
+            console.error('Введите логин и пароль');
             return;
         }
         try {
@@ -22,7 +24,7 @@ function LoginPage({ setUser }) {
                 setUser({ id: data.user_id, username });
                 navigate('/chats');
             } else {
-                alert(data.message);
+                console.error(data.message);
             }
         } catch (error) {
             console.error('Ошибка при входе:', error);
@@ -30,9 +32,7 @@ function LoginPage({ setUser }) {
     };
 
     const handleKeyDown = (e) => {
-        if (e.key === 'Enter') {
-            login();
-        }
+        if (e.key === 'Enter') login();
     };
 
     return (
@@ -57,6 +57,10 @@ function LoginPage({ setUser }) {
                 />
             </div>
             <button onClick={login}>Войти</button>
+            {/* Кнопка для перехода на страницу сброса пароля */}
+            <p>
+                Забыли пароль? <Link to="/reset-password">Сбросить пароль</Link>
+            </p>
         </div>
     );
 }
