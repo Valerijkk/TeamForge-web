@@ -1,0 +1,21 @@
+/* Общие стили для страницы ИИ Помощника */
+.ai-assistant-container {
+    padding: 20px;
+    background-color: #f0f2f5; /* Можно задать общий фон, если нужно */
+}
+
+/* Заголовок страницы — делаем его синим в тон приложения */
+.ai-assistant-title {
+    font-size: 32px;
+    font-weight: 600;
+    color: #007BFF; /* Синий цвет, как в других разделах */
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* Обёртка для айфрейма для скругления углов */
+.ai-assistant-iframe-wrapper {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Лёгкая тень для объёма */
+}
