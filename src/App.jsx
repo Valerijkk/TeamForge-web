@@ -9,6 +9,7 @@ import ProfilePage from './pages/ProfilePage';
 import ChatsPage from './pages/ChatsPage';
 import ChatPage from './pages/ChatPage';
 import CallsPage from './pages/CallsPage';
+import CalendarPage from './pages/CalendarPage'; // импортируем страницу Календаря
 import KnowledgeBasePage from './pages/KnowledgeBasePage';
 import AIAssistantPage from './pages/AIAssistantPage';
 import SoftwarePage from './pages/SoftwarePage';
@@ -52,10 +53,11 @@ function App() {
                         {user ? (
                             <>
                                 {/* Порядок кнопок согласно требованию:
-                    Программное обеспечение → База знаний → ИИ Помощник → Звонки → Чаты → Профиль */}
+                                    Программное обеспечение → База знаний → ИИ Помощник → Календарь → Звонки → Чаты → Профиль */}
                                 <Link to="/software">Программное обеспечение</Link>
                                 <Link to="/knowledge">База знаний</Link>
                                 <Link to="/ai-assistant">ИИ Помощник</Link>
+                                <Link to="/calendar">Календарь</Link> {/* Новая кнопка */}
                                 <Link to="/calls">Звонки</Link>
                                 <Link to="/chats">Чаты</Link>
                                 <Link to="/profile">Профиль</Link>
@@ -82,6 +84,7 @@ function App() {
                     <Route path="/chats" element={<ChatsPage user={user} />} />
                     <Route path="/chat/:chatId" element={<ChatPage user={user} />} />
                     <Route path="/calls" element={<CallsPage user={user} />} />
+                    <Route path="/calendar" element={<CalendarPage />} />  {/* Маршрут для Календаря */}
                     <Route path="/knowledge" element={<KnowledgeBasePage />} />
                     <Route path="/ai-assistant" element={<AIAssistantPage />} />
                     <Route path="/software" element={<SoftwarePage isAdmin={isAdmin} />} />
