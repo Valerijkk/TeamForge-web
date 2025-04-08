@@ -3,6 +3,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
 
+// Создаем глобальный socket – обратите внимание, что если несколько компонентов используют один и тот же socket,
+// возможно, стоит централизовать его через Context, а не создавать прямо здесь.
 const socket = io('http://localhost:5000');
 
 function sanitizeInput(value) {
@@ -16,6 +18,7 @@ function sanitizeInput(value) {
 function ChatPage({ user }) {
     const { chatId } = useParams();
     const navigate = useNavigate();
+
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [file, setFile] = useState(null);
@@ -33,7 +36,7 @@ function ChatPage({ user }) {
     const [availableChats, setAvailableChats] = useState([]);
     const [selectedChatId, setSelectedChatId] = useState('');
 
-    // Добавляем ref, чтобы отслеживать, смонтирован ли компонент
+    // mountedRef для отслеживания, смонтирован ли компонент.
     const mountedRef = useRef(true);
     useEffect(() => {
         mountedRef.current = true;
@@ -42,6 +45,10 @@ function ChatPage({ user }) {
         };
     }, []);
 
+    // ref для хранения id timeout, чтобы потом его можно было очистить
+    const timeoutRef = useRef(null);
+
+    // Если пользователь отсутствует, перенаправляем его
     useEffect(() => {
         if (!user) {
             navigate('/');
@@ -74,7 +81,7 @@ function ChatPage({ user }) {
                 }
             })
             .catch(() => {
-                // Если эндпоинта нет - игнорируем
+                // Если эндпоинта нет – игнорируем
             });
     }, [chatId]);
 
@@ -118,10 +125,12 @@ function ChatPage({ user }) {
             console.log('Notification settings updated:', data);
         };
 
+        // Обработка статуса с использованием timeoutRef
         const handleStatus = (data) => {
             if (mountedRef.current) {
                 setStatus(data.message);
-                setTimeout(() => {
+                if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                timeoutRef.current = setTimeout(() => {
                     if (mountedRef.current) setStatus('');
                 }, 3000);
             }
@@ -154,6 +163,7 @@ function ChatPage({ user }) {
             socket.off('status', handleStatus);
             socket.off('message_deleted_for_all', handleMessageDeletedForAll);
             socket.off('message_deleted_for_user', handleMessageDeletedForUser);
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
         };
     }, [chatId, user, fetchMessages, fetchReactions, fetchUserChats, navigate]);
 
