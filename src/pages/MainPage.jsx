@@ -1,12 +1,18 @@
-/* ------------------- pages/MainPage.jsx (Главная страница) ------------------- */
 import React from 'react';
+import './MainPage.css';
 
 function MainPage() {
     return (
         <div className="main-page">
-            <h1>TeamForge</h1>
-            <p>Чат для программистов: общайтесь, делитесь файлами и создавайте команды.</p>
-            <p>Добро пожаловать на нашу главную страницу!</p>
+            <div className="overlay">
+                <h1>TeamForge</h1>
+                <p>
+                    Чат для программистов — общайтесь, делитесь файлами, создавайте команды и воплощайте идеи!
+                </p>
+                <a href="/register" className="cta-button">
+                    Начать сейчас
+                </a>
+            </div>
         </div>
     );
 }
