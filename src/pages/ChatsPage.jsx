@@ -22,20 +22,33 @@ function ChatsPage({ user }) {
             navigate('/');
             return;
         }
+        // Локальный флаг монтирования
+        let isMounted = true;
 
         // Получаем список чатов
         fetch(`http://localhost:5000/user_chats/${user.id}`)
             .then(res => res.json())
-            .then(data => setChats(data));
+            .then(data => {
+                if (isMounted) {
+                    setChats(data);
+                }
+            })
+            .catch(err => console.error(err));
 
-        // Список всех пользователей
+        // Получаем список всех пользователей и фильтруем себя
         fetch('http://localhost:5000/users')
             .then(res => res.json())
             .then(data => {
-                // Исключаем себя
-                const filtered = data.filter(u => u.id !== user.id);
-                setAllUsers(filtered);
-            });
+                if (isMounted) {
+                    const filtered = data.filter(u => u.id !== user.id);
+                    setAllUsers(filtered);
+                }
+            })
+            .catch(err => console.error(err));
+
+        return () => {
+            isMounted = false;
+        };
     }, [user, navigate]);
 
     const toggleSelect = (u) => {
