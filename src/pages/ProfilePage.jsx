@@ -1,5 +1,7 @@
+// ProfilePage.jsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import './ProfilePage.css'; // <-- Подключаем наш файл со стилями
 
 function ProfilePage({ user, onLogout }) {
     const navigate = useNavigate();
@@ -12,7 +14,6 @@ function ProfilePage({ user, onLogout }) {
     const [searchResults, setSearchResults] = useState([]);
     const [callHistory, setCallHistory] = useState([]);
 
-    // Глобальный реф для отслеживания монтирования компонента
     const mountedRef = useRef(true);
     useEffect(() => {
         mountedRef.current = true;
@@ -21,7 +22,6 @@ function ProfilePage({ user, onLogout }) {
         };
     }, []);
 
-    // Загрузить данные профиля
     const loadProfileData = useCallback(() => {
         fetch(`http://localhost:5000/profile_data/${user.id}`)
             .then(res => res.json())
@@ -35,7 +35,6 @@ function ProfilePage({ user, onLogout }) {
             .catch(error => console.error('Ошибка получения данных профиля:', error));
     }, [user.id]);
 
-    // Загрузить друзей
     const loadFriends = useCallback(() => {
         fetch(`http://localhost:5000/friends/${user.id}`)
             .then(res => res.json())
@@ -47,7 +46,6 @@ function ProfilePage({ user, onLogout }) {
             .catch(error => console.error('Ошибка получения друзей:', error));
     }, [user.id]);
 
-    // Загрузить входящие запросы в друзья
     const loadFriendRequests = useCallback(() => {
         fetch(`http://localhost:5000/friend_requests/${user.id}`)
             .then(res => res.json())
@@ -59,7 +57,6 @@ function ProfilePage({ user, onLogout }) {
             .catch(error => console.error('Ошибка получения запросов в друзья:', error));
     }, [user.id]);
 
-    // Загрузить историю звонков
     const loadCallHistory = useCallback(() => {
         fetch(`http://localhost:5000/call_history/${user.id}`)
             .then(res => res.json())
@@ -82,7 +79,6 @@ function ProfilePage({ user, onLogout }) {
         loadCallHistory();
     }, [user, navigate, loadProfileData, loadFriends, loadFriendRequests, loadCallHistory]);
 
-    // Поиск пользователей для добавления в друзья
     const handleSearch = () => {
         if (searchQuery.trim() !== '') {
             fetch(`http://localhost:5000/search_users?q=${searchQuery}`)
@@ -99,7 +95,6 @@ function ProfilePage({ user, onLogout }) {
         }
     };
 
-    // Отправка запроса на добавление друга
     const addFriend = (receiverId) => {
         const body = { requester_id: user.id, receiver_id: receiverId };
         fetch('http://localhost:5000/friend_request', {
@@ -114,7 +109,6 @@ function ProfilePage({ user, onLogout }) {
             .catch(error => console.error('Ошибка при добавлении в друзья:', error));
     };
 
-    // Подтверждение запроса в друзья
     const confirmFriendRequest = (friendRequestId) => {
         fetch('http://localhost:5000/friend_request/confirm', {
             method: 'POST',
@@ -130,7 +124,6 @@ function ProfilePage({ user, onLogout }) {
             .catch(error => console.error('Ошибка подтверждения запроса в друзья:', error));
     };
 
-    // Отклонение запроса в друзья
     const rejectFriendRequest = (friendRequestId) => {
         fetch('http://localhost:5000/friend_request/reject', {
             method: 'POST',
@@ -145,7 +138,6 @@ function ProfilePage({ user, onLogout }) {
             .catch(error => console.error('Ошибка отклонения запроса в друзья:', error));
     };
 
-    // Удаление друга
     const removeFriend = (friendId) => {
         fetch(`http://localhost:5000/friendship?user_id=${user.id}&friend_id=${friendId}`, {
             method: 'DELETE'
@@ -159,95 +151,124 @@ function ProfilePage({ user, onLogout }) {
     };
 
     return (
-        <div className="profile-container">
-            <h2>Профиль пользователя</h2>
-            <p><strong>Имя пользователя:</strong> {user.username}</p>
-            <p><strong>Количество чатов:</strong> {chatsCount}</p>
-            <p><strong>Количество сообщений:</strong> {messagesCount}</p>
-            <p><strong>Отправленные документы:</strong></p>
-            {docs.length === 0 ? (
-                <p>Нет загруженных документов</p>
-            ) : (
-                <ul>
-                    {docs.map((doc, index) => (
-                        <li key={index}>
-                            <a href={`http://localhost:5000/uploads/${doc}`} target="_blank" rel="noreferrer">
-                                {doc}
-                            </a>
-                        </li>
-                    ))}
-                </ul>
-            )}
+        <div className="profile-page container">
+            <h2 className="profile-title">Профиль пользователя</h2>
 
-            <hr />
-            <h3>Друзья</h3>
-            {friends.length === 0 ? (
-                <p>У вас нет друзей.</p>
-            ) : (
-                <ul>
-                    {friends.map(f => (
-                        <li key={f.id}>
-                            {f.username} <button onClick={() => removeFriend(f.id)}>Удалить</button>
-                        </li>
-                    ))}
-                </ul>
-            )}
-
-            <hr />
-            <h3>Входящие запросы в друзья</h3>
-            {friendRequests.length === 0 ? (
-                <p>Нет входящих запросов.</p>
-            ) : (
-                <ul>
-                    {friendRequests.map(fr => (
-                        <li key={fr.id}>
-                            Запрос от пользователя ID {fr.requester_id}{' '}
-                            <button onClick={() => confirmFriendRequest(fr.id)}>Принять</button>{' '}
-                            <button onClick={() => rejectFriendRequest(fr.id)}>Отклонить</button>
-                        </li>
-                    ))}
-                </ul>
-            )}
-
-            <hr />
-            <h3>Добавить друга</h3>
-            <div>
-                <input
-                    type="text"
-                    placeholder="Введите ник пользователя"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <button onClick={handleSearch}>Искать</button>
+            <div className="profile-info">
+                <p><strong>Имя пользователя:</strong> {user.username}</p>
+                <p><strong>Количество чатов:</strong> {chatsCount}</p>
+                <p><strong>Количество сообщений:</strong> {messagesCount}</p>
             </div>
-            {searchResults.length > 0 && (
-                <ul>
-                    {searchResults.map(u => (
-                        <li key={u.id}>
-                            {u.username} <button onClick={() => addFriend(u.id)}>Добавить в друзья</button>
-                        </li>
-                    ))}
-                </ul>
-            )}
+
+            <div className="profile-docs">
+                <h3>Отправленные документы:</h3>
+                {docs.length === 0 ? (
+                    <p>Нет загруженных документов</p>
+                ) : (
+                    <ul>
+                        {docs.map((doc, index) => (
+                            <li key={index}>
+                                <a
+                                    href={`http://localhost:5000/uploads/${doc}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
+                                    {doc}
+                                </a>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
 
             <hr />
-            <h3>История звонков</h3>
-            {callHistory.length === 0 ? (
-                <p>Нет записей о звонках.</p>
-            ) : (
-                <ul>
-                    {callHistory.map(call => (
-                        <li key={call.id}>
-                            {call.call_type === 'personal' ? 'Личный' : 'Групповой'} звонок от {call.caller_username}
-                            {call.recipients.length > 0 && <> к {call.recipients.join(', ')}</>}
-                            с {call.start_time} до {call.end_time} (Длительность: {call.duration} сек.)
-                        </li>
-                    ))}
-                </ul>
-            )}
+
+            <div className="profile-friends">
+                <h3>Друзья</h3>
+                {friends.length === 0 ? (
+                    <p>У вас нет друзей.</p>
+                ) : (
+                    <ul className="friends-list">
+                        {friends.map(f => (
+                            <li key={f.id}>
+                                {f.username}
+                                <button onClick={() => removeFriend(f.id)}>Удалить</button>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
 
             <hr />
-            <button onClick={onLogout}>Выйти</button>
+
+            <div className="profile-requests">
+                <h3>Входящие запросы в друзья</h3>
+                {friendRequests.length === 0 ? (
+                    <p>Нет входящих запросов.</p>
+                ) : (
+                    <ul className="requests-list">
+                        {friendRequests.map(fr => (
+                            <li key={fr.id}>
+                                Запрос от пользователя ID {fr.requester_id}{' '}
+                                <button onClick={() => confirmFriendRequest(fr.id)}>Принять</button>{' '}
+                                <button onClick={() => rejectFriendRequest(fr.id)}>Отклонить</button>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+
+            <hr />
+
+            <div className="profile-search">
+                <h3>Добавить друга</h3>
+                <div>
+                    <input
+                        type="text"
+                        placeholder="Введите ник пользователя"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    <button onClick={handleSearch}>Искать</button>
+                </div>
+                {searchResults.length > 0 && (
+                    <ul className="search-results">
+                        {searchResults.map(u => (
+                            <li key={u.id}>
+                                {u.username}
+                                <button onClick={() => addFriend(u.id)}>Добавить в друзья</button>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+
+            <hr />
+
+            <div className="profile-calls">
+                <h3>История звонков</h3>
+                {callHistory.length === 0 ? (
+                    <p>Нет записей о звонках.</p>
+                ) : (
+                    <ul className="calls-list">
+                        {callHistory.map(call => (
+                            <li key={call.id}>
+                                {call.call_type === 'personal' ? 'Личный' : 'Групповой'} звонок от{' '}
+                                {call.caller_username}
+                                {call.recipients.length > 0 && <> к {call.recipients.join(', ')}</>}
+                                {' '}с {call.start_time} до {call.end_time}
+                                {' '}(Длительность: {call.duration} сек.)
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+
+            <hr />
+
+            <div className="profile-logout">
+                <button onClick={onLogout}>Выйти</button>
+            </div>
         </div>
     );
 }
