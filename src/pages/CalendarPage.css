@@ -1,3 +1,7 @@
+/*
+  Здесь сохраните СВОИ стили для .my-react-calendar,
+  чтобы они оставались неизменными:
+*/
 .my-react-calendar {
     margin: 20px auto;
     max-width: 350px;
@@ -19,7 +23,6 @@
     padding: 0.5rem;
 }
 
-/* Кнопки в навигации */
 .my-react-calendar .react-calendar__navigation button {
     background: none;
     border: none;
@@ -30,12 +33,9 @@
     padding: 4px 8px;
     border-radius: 4px;
 }
-
 .my-react-calendar .react-calendar__navigation button:hover:not(:disabled) {
     background: rgba(255,255,255,0.2);
 }
-
-/* Недоступные кнопки (например, переход за границы) */
 .my-react-calendar .react-calendar__navigation button:disabled {
     color: rgba(255,255,255,0.4);
     cursor: default;
@@ -48,7 +48,6 @@
     font-size: 0.75rem;
     color: #666;
 }
-
 .my-react-calendar .react-calendar__month-view__weekdays__weekday {
     padding: 0.5rem;
     text-align: center;
@@ -65,15 +64,13 @@
     justify-content: center;
     color: #333;
 }
-
-/* Ховер на плитке дня */
 .my-react-calendar .react-calendar__tile:hover {
     background: #e6e6e6;
 }
 
 /* Сегодня */
 .my-react-calendar .react-calendar__tile--now {
-    background: #fffbe5; /* чуть-чуть желтоватый фон */
+    background: #fffbe5;
     border: 1px solid #3f51b5;
     color: #333;
 }
@@ -84,7 +81,120 @@
     color: #fff;
 }
 
-/* Выходные (СБ, ВС) можно подсветить: */
+/* Выходные (СБ, ВС) */
 .my-react-calendar .react-calendar__month-view__days__day--weekend {
     color: #d10000;
+}
+
+
+/* ========= Ниже новые стили для остальной верстки ========== */
+
+/* Родительский блок */
+.calendar-page {
+    background-color: #f8f9fa; /* слегка светлый фон */
+    padding: 20px;
+    border-radius: 8px;
+}
+
+/* Заголовок "Календарь задач" */
+.calendar-title {
+    color: #007BFF;
+    font-size: 26px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* Подзаголовки "Задачи на ..." / "Добавить задачу" и т.п. */
+.tasks-subtitle {
+    color: #007BFF;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+/* Плашка, если задач нет */
+.tasks-none {
+    color: #666;
+    font-style: italic;
+    margin: 10px 0 15px 0;
+}
+
+/* Список задач (ul) */
+.tasks-list {
+    list-style: none; /* убираем маркеры */
+    margin: 0;
+    padding: 0;
+}
+
+/* Элемент задачи */
+.task-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+/* Внутри задачи — левая часть (название + описание) */
+.task-item__info {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+}
+
+.task-item__title {
+    font-weight: 600;
+    color: #333;
+    margin-right: 5px;
+}
+
+.task-item__desc {
+    color: #555;
+}
+
+/* Кнопки "Редактировать", "Удалить" */
+.task-item__buttons button {
+    margin-left: 6px;
+}
+
+/* Форма для добавления/редактирования задачи */
+.task-form {
+    margin: 15px 0 20px 0;
+}
+
+.date-label {
+    margin-top: 5px;
+    margin-right: 5px;
+}
+
+/* Кнопка "Добавить" / "Обновить" */
+.btn-add-update {
+    background-color: #28a745; /* зеленый фон */
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    margin-top: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+.btn-add-update:hover {
+    background-color: #218838;
+}
+
+/* Адаптация под мобильный */
+@media (max-width: 600px) {
+    .task-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .task-item__buttons {
+        margin-top: 10px;
+    }
 }
