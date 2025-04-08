@@ -1,0 +1,103 @@
+/* ChatsPage.css */
+
+/* Общий контейнер страницы чатов */
+.chats-container {
+    margin-top: 20px;
+    margin-bottom: 40px;
+}
+
+/* Заголовок */
+.chats-container h2 {
+    font-size: 24px;
+    color: #007BFF;
+    margin-bottom: 1rem;
+}
+
+/* Надпись "Создать групповой чат" */
+.chats-container h3 {
+    font-size: 18px;
+    color: #333;
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Подзаголовок "Выберите участников:" */
+.chats-container h4 {
+    font-size: 16px;
+    color: #555;
+    margin: 1rem 0 0.5rem 0;
+}
+
+/* Список чатов */
+.chat-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* Каждый элемент списка чатов */
+.chat-list li {
+    background-color: #fff;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    cursor: pointer;
+}
+.chat-list li:hover {
+    box-shadow: 0 0 10px rgba(0,0,0,0.06);
+    transform: translateY(-2px);
+}
+
+/* Разделительная линия */
+.chats-container hr {
+    margin: 2rem 0;
+    border: 0;
+    border-top: 1px solid #ccc;
+}
+
+/* Поле ввода названия чата */
+.form-group input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* Контейнер для чекбоксов */
+.select-users {
+    margin-top: 0.5rem;
+}
+
+/* Каждая строчка с чекбоксом */
+.user-checkbox {
+    display: block;
+    margin-bottom: 5px;
+    color: #333;
+    font-size: 14px;
+}
+.user-checkbox input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+/* Кнопка создания чата */
+.create-chat-btn {
+    padding: 10px 20px;
+    background-color: #ff8c00;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-top: 1rem;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+.create-chat-btn:hover {
+    background-color: #ff9d1e;
+    transform: scale(1.03);
+}
+.create-chat-btn:active {
+    transform: scale(0.97);
+}
