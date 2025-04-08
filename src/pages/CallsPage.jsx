@@ -16,7 +16,7 @@ function CallsPage({ user }) {
     const [incomingCall, setIncomingCall] = useState(null);
     const [callParticipants, setCallParticipants] = useState([]);
 
-    // Состояния для переключения вебкамеры/демонстрации
+    // Состояния для переключения вебкамеры и демонстрации экрана
     const [isWebcamOn, setIsWebcamOn] = useState(false);
     const [isScreenSharingOn, setIsScreenSharingOn] = useState(false);
 
@@ -28,11 +28,20 @@ function CallsPage({ user }) {
     const webcamTrackRef = useRef(null);
     const screenTrackRef = useRef(null);
 
-    // Храним remote поток для каждого peerId (только один поток на соединение)
+    // Храним remote поток для каждого peerId (один поток на соединение)
     const [remoteStreams, setRemoteStreams] = useState({});
 
     // Объект для хранения RTCPeerConnection
     const peerConnections = useRef({});
+
+    // Глобальный ref для отслеживания монтирования компонента
+    const mountedRef = useRef(true);
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+        };
+    }, []);
 
     const createPeerConnection = useCallback((peerId) => {
         const pc = new RTCPeerConnection({
@@ -48,10 +57,11 @@ function CallsPage({ user }) {
                 socket.emit('webrtc_candidate', { to: peerId, from: user.id, candidate: event.candidate });
             }
         };
-        // Вместо накопления нескольких потоков – просто перезаписываем remoteStreams[peerId]
         pc.ontrack = (event) => {
             const stream = event.streams[0];
-            setRemoteStreams(prev => ({ ...prev, [peerId]: stream }));
+            if (mountedRef.current) {
+                setRemoteStreams(prev => ({ ...prev, [peerId]: stream }));
+            }
         };
         peerConnections.current[peerId] = pc;
         return pc;
@@ -61,18 +71,24 @@ function CallsPage({ user }) {
         if (!localStreamRef.current) {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia(audioConstraints);
-                localStreamRef.current = stream;
+                if (mountedRef.current) {
+                    localStreamRef.current = stream;
+                }
             } catch (err) {
                 console.error("Ошибка получения аудио для входящего звонка:", err);
                 return;
             }
         }
-        setCallActive(true);
-        setCallStartTime(new Date());
+        if (mountedRef.current) {
+            setCallActive(true);
+            setCallStartTime(new Date());
+        }
         if (!peerConnections.current[callerId]) {
             createPeerConnection(callerId);
         }
-        setCallParticipants([callerId]);
+        if (mountedRef.current) {
+            setCallParticipants([callerId]);
+        }
     }, [audioConstraints, createPeerConnection]);
 
     // Функция renegotiation для обновления SDP
@@ -95,14 +111,18 @@ function CallsPage({ user }) {
         fetch("http://localhost:5000/users")
             .then(res => res.json())
             .then(data => {
-                const others = data.filter(u => u.id !== user.id);
-                setAllUsers(others);
+                if (mountedRef.current) {
+                    const others = data.filter(u => u.id !== user.id);
+                    setAllUsers(others);
+                }
             })
             .catch(err => console.error("Ошибка загрузки пользователей:", err));
 
         socket.on('incoming_call', async (data) => {
             console.log("Входящий звонок от", data.from);
-            setIncomingCall(data);
+            if (mountedRef.current) {
+                setIncomingCall(data);
+            }
         });
 
         socket.on('webrtc_offer', async (data) => {
