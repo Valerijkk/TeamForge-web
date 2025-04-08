@@ -1,31 +1,66 @@
-/* ------------------- app.css ------------------- */
+/* ================================================= */
+/*                Базовые стили                     */
+/* ================================================= */
 
-/* Сброс общих отступов и оформление */
-* {
+/* Сброс общих отступов и установка box-sizing */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-body {
+html, body {
+  height: 100%;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f0f2f5;
+  background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
   color: #333;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
 }
 
-/* Контейнер */
+/* Плавная анимация появления элементов */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-50px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes zoomIn {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ================================================= */
+/*              Контейнеры и базовый лейаут          */
+/* ================================================= */
+
 .container {
   width: 90%;
   max-width: 1200px;
   margin: 0 auto;
+  padding: 20px;
+  animation: fadeIn 0.8s ease-out both;
 }
 
-/* Шапка */
+/* ================================================= */
+/*                   Шапка (Header)                 */
+/* ================================================= */
+
 header {
-  background-color: #ffffff;
-  padding: 15px 0;
-  border-bottom: 1px solid #ddd;
-  margin-bottom: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 15px 20px;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 25px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(4px);
 }
 
 header .nav {
@@ -35,143 +70,251 @@ header .nav {
 }
 
 header .logo {
-  font-size: 24px;
-  font-weight: bold;
+  font-size: 32px;
+  font-weight: 700;
   color: #007BFF;
+  transition: transform 0.3s ease;
+}
+
+header .logo:hover {
+  transform: scale(1.1);
 }
 
 header .menu a {
-  margin-left: 15px;
+  margin-left: 25px;
   text-decoration: none;
   color: #007BFF;
   font-weight: 500;
-  transition: color 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 header .menu a:hover {
   color: #0056b3;
+  transform: scale(1.05);
 }
 
-/* Кнопки */
+/* ================================================= */
+/*                    Кнопки                        */
+/* ================================================= */
+
 button {
-  padding: 10px 20px;
+  padding: 12px 25px;
   border: none;
-  background-color: #007BFF;
+  background: linear-gradient(135deg, #007BFF, #0056b3);
   color: #fff;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
-  font-size: 14px;
-  margin: 5px 0;
+  font-size: 15px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  outline: none;
 }
 
 button:hover {
-  background-color: #0056b3;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* Формы */
+button:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* ================================================= */
+/*                   Формы и поля                   */
+/* ================================================= */
+
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
 input[type="text"],
 input[type="password"],
+input[type="email"],
 input[type="file"],
-input[type="search"] {
+input[type="search"],
+textarea {
   width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  margin-bottom: 10px;
+  padding: 14px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 15px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Главная страница */
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+input[type="search"]:focus,
+textarea:focus {
+  border-color: #007BFF;
+  box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
+}
+
+/* ================================================= */
+/*                 Главная страница                 */
+/* ================================================= */
+
 .main-page {
   text-align: center;
-  margin: 50px 0;
+  margin: 60px 0;
 }
 
 .main-page h1 {
-  font-size: 48px;
+  font-size: 56px;
   margin-bottom: 20px;
   color: #007BFF;
+  animation: slideDown 0.8s ease-out both;
 }
 
 .main-page p {
-  font-size: 18px;
+  font-size: 20px;
   margin-bottom: 30px;
+  line-height: 1.6;
+  animation: fadeIn 1s ease-out both;
 }
 
-/* Блок чата */
+/* ================================================= */
+/*                     Чат                          */
+/* ================================================= */
+
 .chat-container {
-  border: 1px solid #ccc;
-  height: 400px;
-  overflow-y: scroll;
-  border-radius: 4px;
-  padding: 10px;
-  margin-bottom: 20px;
+  border: 1px solid #ddd;
   background-color: #fff;
+  height: 450px;
+  overflow-y: auto;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 30px;
+  transition: box-shadow 0.3s ease;
+}
+
+.chat-container:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
 }
 
 .message {
-  margin-bottom: 15px;
-  padding: 10px;
-  background-color: #f7f7f7;
-  border-radius: 6px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 10px;
+  position: relative;
+  animation: slideDown 0.5s ease-out both;
 }
 
 .message strong {
   display: block;
+  margin-bottom: 8px;
+  font-size: 16px;
   color: #333;
-  margin-bottom: 5px;
 }
 
 .message img {
-  max-width: 200px;
-  border-radius: 4px;
-  margin-top: 5px;
+  max-width: 220px;
+  border-radius: 8px;
+  margin-top: 8px;
+  transition: transform 0.3s ease;
 }
 
-/* Список чатов */
+.message img:hover {
+  transform: scale(1.1);
+}
+
+/* ================================================= */
+/*                 Список чатов                     */
+/* ================================================= */
+
 .chat-list {
   list-style: none;
   padding: 0;
-  margin: 0;
 }
 
 .chat-list li {
-  padding: 10px;
-  border: 1px solid #ccc;
-  margin-bottom: 8px;
-  border-radius: 4px;
-  background-color: #fff;
+  padding: 18px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #fff;
+  margin-bottom: 10px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: background 0.3s ease, transform 0.2s ease;
 }
 
 .chat-list li:hover {
-  background-color: #f0f0f0;
+  background: #f0f0f0;
+  transform: translateX(5px);
 }
 
-/* Профиль */
+/* ================================================= */
+/*                    Профиль                      */
+/* ================================================= */
+
 .profile-container {
-  background-color: #fff;
-  padding: 20px;
-  border-radius: 8px;
+  background: #fff;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.8s ease-out both;
 }
 
 .profile-container h2 {
-  margin-bottom: 15px;
+  margin-bottom: 30px;
+  font-size: 32px;
+  color: #007BFF;
 }
 
-/* Небольшие вспомогательные элементы */
+/* ================================================= */
+/*       Дополнительные элементы (вспомогательные)  */
+/* ================================================= */
+
 .small-text {
   font-size: 12px;
   color: #777;
+  margin-top: 8px;
 }
 
 .status-message {
-  margin: 10px 0;
+  margin: 15px 0;
   color: #007BFF;
   font-weight: 500;
+  animation: fadeIn 0.5s ease-out both;
+}
+
+/* ================================================= */
+/*                 Модальные окна                   */
+/* ================================================= */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 30px;
+  border-radius: 12px;
+  min-width: 320px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  animation: zoomIn 0.3s ease-out both;
+}
+
+/* ================================================= */
+/*                     Ссылки                       */
+/* ================================================= */
+
+a {
+  color: #007BFF;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: #0056b3;
 }
