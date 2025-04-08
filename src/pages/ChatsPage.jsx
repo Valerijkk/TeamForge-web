@@ -1,6 +1,7 @@
-/* ------------------- pages/ChatsPage.jsx ------------------- */
+// ChatsPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import './ChatsPage.css'; // <-- Подключаем наш файл стилей
 
 function sanitizeInput(value) {
     const forbiddenSQLPatterns = /drop\s+table|delete\s+from|truncate\s+table|update\s+.*\s+set|insert\s+into|select\s+.*\s+from/gi;
@@ -22,7 +23,6 @@ function ChatsPage({ user }) {
             navigate('/');
             return;
         }
-        // Локальный флаг монтирования
         let isMounted = true;
 
         // Получаем список чатов
@@ -35,7 +35,7 @@ function ChatsPage({ user }) {
             })
             .catch(err => console.error(err));
 
-        // Получаем список всех пользователей и фильтруем себя
+        // Список всех пользователей (исключая себя)
         fetch('http://localhost:5000/users')
             .then(res => res.json())
             .then(data => {
@@ -66,6 +66,7 @@ function ChatsPage({ user }) {
             return;
         }
         const userIds = selected.map(u => u.id);
+
         try {
             const res = await fetch('http://localhost:5000/create_chat', {
                 method: 'POST',
@@ -80,7 +81,7 @@ function ChatsPage({ user }) {
             if (data.status === 'success') {
                 const newChat = { id: data.chat_id, name: safeName, is_group: true };
                 setChats(prev => [...prev, newChat]);
-                navigate(`/chat/${newChat.id}`); // После создания переходим в чат
+                navigate(`/chat/${newChat.id}`);
             } else {
                 alert(data.message);
             }
@@ -94,7 +95,7 @@ function ChatsPage({ user }) {
     };
 
     return (
-        <div className="container">
+        <div className="container chats-container">
             <h2>Ваши чаты</h2>
             {chats.length === 0 ? (
                 <p>У вас пока нет ни одного чата.</p>
@@ -107,7 +108,9 @@ function ChatsPage({ user }) {
                     ))}
                 </ul>
             )}
+
             <hr />
+
             <h3>Создать групповой чат</h3>
             <div className="form-group">
                 <input
@@ -117,10 +120,11 @@ function ChatsPage({ user }) {
                     onChange={e => setChatName(e.target.value)}
                 />
             </div>
+
             <h4>Выберите участников:</h4>
-            {allUsers.map(u => (
-                <div key={u.id}>
-                    <label>
+            <div className="select-users">
+                {allUsers.map(u => (
+                    <label key={u.id} className="user-checkbox">
                         <input
                             type="checkbox"
                             checked={!!selected.find(s => s.id === u.id)}
@@ -128,9 +132,10 @@ function ChatsPage({ user }) {
                         />
                         {u.username}
                     </label>
-                </div>
-            ))}
-            <button onClick={createChat}>Создать чат</button>
+                ))}
+            </div>
+
+            <button onClick={createChat} className="create-chat-btn">Создать чат</button>
         </div>
     );
 }
