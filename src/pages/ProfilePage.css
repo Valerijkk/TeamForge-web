@@ -1,0 +1,201 @@
+/* ------------------- ProfilePage.css ------------------- */
+
+/* Общий контейнер профиля */
+.profile-page {
+    margin-top: 20px;
+    margin-bottom: 40px;
+    display: flex;
+    flex-direction: column;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Заголовок страницы профиля */
+.profile-title {
+    font-size: 24px;
+    margin-bottom: 1rem;
+    color: #007BFF;
+}
+
+/* Блок с основной информацией */
+.profile-info p {
+    margin-bottom: 6px;
+    font-size: 15px;
+    color: #333;
+}
+
+/* Список документов */
+.profile-docs {
+    margin-top: 10px;
+}
+.profile-docs ul {
+    list-style-type: disc;
+    padding-left: 20px;
+}
+.profile-docs a {
+    color: #007BFF;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+.profile-docs a:hover {
+    color: #0056b3;
+}
+
+/* Блок "Друзья" */
+.profile-friends {
+    margin-top: 20px;
+}
+.friends-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.friends-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f7f7f7;
+    margin-bottom: 5px;
+    padding: 6px 10px; /* Повыше, чем было (ранее 3px 5px) */
+    border-radius: 4px;
+}
+.friends-list button {
+    background-color: #dc3545;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px; /* Увеличено по сравнению с предыдущим размером 2px 4px */
+    font-size: 12px;  /* Чуть больше, чем 10px */
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+.friends-list button:hover {
+    background-color: #c82333;
+}
+
+/* Блок "Входящие запросы" */
+.profile-requests {
+    margin-top: 20px;
+}
+.requests-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.requests-list li {
+    margin-bottom: 8px;
+    background: #f7f7f7;
+    padding: 6px 10px; /* Увеличено по сравнению с предыдущим размером */
+    border-radius: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+}
+.requests-list button {
+    background-color: #28a745;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;  /* Увеличено */
+    font-size: 12px;   /* Немного больше */
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.requests-list button:hover {
+    background-color: #218838;
+}
+.requests-list button:last-of-type {
+    background-color: #dc3545;
+}
+.requests-list button:last-of-type:hover {
+    background-color: #c82333;
+}
+
+/* Блок "Добавить друга" */
+.profile-search {
+    margin-top: 20px;
+}
+.profile-search input {
+    margin-right: 6px;
+    padding: 6px;
+    font-size: 14px; /* Немного увеличено */
+}
+.profile-search button {
+    padding: 4px 8px; /* Увеличено по сравнению с предыдущим размером 2px 4px */
+    font-size: 12px;
+    background-color: #007BFF;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+.profile-search button:hover {
+    background-color: #0056b3;
+}
+.search-results {
+    list-style: none;
+    margin-top: 10px;
+    padding: 0;
+}
+.search-results li {
+    background: #f7f7f7;
+    margin-bottom: 5px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.search-results button {
+    background-color: #007BFF;
+    color: #fff;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    transition: background-color 0.2s ease;
+}
+.search-results button:hover {
+    background-color: #0056b3;
+}
+
+/* Блок "История звонков" */
+.profile-calls {
+    margin-top: 20px;
+}
+.calls-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.calls-list li {
+    background: #f7f7f7;
+    margin-bottom: 5px;
+    padding: 6px 10px;
+    border-radius: 4px;
+}
+
+/* Кнопка "Выйти" */
+.profile-logout {
+    margin-top: 20px;
+}
+.profile-logout button {
+    background-color: #ffa500;
+    color: #fff;
+    border: none;
+    padding: 6px 12px; /* Увеличено по сравнению с предыдущим размером 4px 8px */
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    font-size: 14px;
+}
+.profile-logout button:hover {
+    background-color: #ff8c00;
+    transform: scale(1.03);
+}
+.profile-logout button:active {
+    transform: scale(0.97);
+}
