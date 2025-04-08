@@ -2,11 +2,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
+import './ChatPage.css'; // Подключаем наш файл стилей
 
-// Создаем глобальный socket – обратите внимание, что если несколько компонентов используют один и тот же socket,
-// возможно, стоит централизовать его через Context, а не создавать прямо здесь.
+// Создаём socket (при необходимости лучше вынести в Context)
 const socket = io('http://localhost:5000');
 
+// Функция "санитайза" для ввода
 function sanitizeInput(value) {
     const forbiddenSQLPatterns = /drop\s+table|delete\s+from|truncate\s+table|update\s+.*\s+set|insert\s+into|select\s+.*\s+from/gi;
     let cleaned = value.replace(forbiddenSQLPatterns, '');
@@ -28,6 +29,8 @@ function ChatPage({ user }) {
 
     const [messageReactions, setMessageReactions] = useState({});
     const [menuOpenForMsgId, setMenuOpenForMsgId] = useState(null);
+
+    // Модалки пересылки и ответа
     const [replyModalOpen, setReplyModalOpen] = useState(false);
     const [replyTargetId, setReplyTargetId] = useState(null);
     const [replyContent, setReplyContent] = useState('');
@@ -36,7 +39,7 @@ function ChatPage({ user }) {
     const [availableChats, setAvailableChats] = useState([]);
     const [selectedChatId, setSelectedChatId] = useState('');
 
-    // mountedRef для отслеживания, смонтирован ли компонент.
+    // Отслеживаем, смонтирован ли компонент
     const mountedRef = useRef(true);
     useEffect(() => {
         mountedRef.current = true;
@@ -45,10 +48,10 @@ function ChatPage({ user }) {
         };
     }, []);
 
-    // ref для хранения id timeout, чтобы потом его можно было очистить
+    // Для таймаута статуса
     const timeoutRef = useRef(null);
 
-    // Если пользователь отсутствует, перенаправляем его
+    // Если пользователь отсутствует – перенаправляем
     useEffect(() => {
         if (!user) {
             navigate('/');
@@ -56,6 +59,7 @@ function ChatPage({ user }) {
         }
     }, [user, navigate]);
 
+    // Функция загрузки сообщений
     const fetchMessages = useCallback(() => {
         const safeSearch = sanitizeInput(search);
         let url = `http://localhost:5000/messages/${chatId}?user_id=${user.id}`;
@@ -63,40 +67,43 @@ function ChatPage({ user }) {
             url += `&q=${safeSearch}`;
         }
         fetch(url)
-            .then(res => res.json())
-            .then(data => {
+            .then((res) => res.json())
+            .then((data) => {
                 if (mountedRef.current) {
                     setMessages(data);
                 }
             })
-            .catch(err => console.error('Ошибка при загрузке сообщений:', err));
+            .catch((err) => console.error('Ошибка при загрузке сообщений:', err));
     }, [chatId, search, user.id]);
 
+    // Функция загрузки реакций
     const fetchReactions = useCallback(() => {
         fetch(`http://localhost:5000/reactions/${chatId}`)
-            .then(res => res.json())
-            .then(data => {
+            .then((res) => res.json())
+            .then((data) => {
                 if (mountedRef.current) {
                     setMessageReactions(data);
                 }
             })
             .catch(() => {
-                // Если эндпоинта нет – игнорируем
+                // Если эндпоинта нет — игнорируем
             });
     }, [chatId]);
 
+    // Функция получения списка чатов пользователя для пересылки сообщений
     const fetchUserChats = useCallback(() => {
         if (!user) return;
         fetch(`http://localhost:5000/user_chats/${user.id}`)
-            .then(res => res.json())
-            .then(chats => {
+            .then((res) => res.json())
+            .then((chats) => {
                 if (mountedRef.current) {
                     setAvailableChats(chats);
                 }
             })
-            .catch(err => console.error('Ошибка при загрузке чатов пользователя:', err));
+            .catch((err) => console.error('Ошибка при загрузке чатов пользователя:', err));
     }, [user]);
 
+    // Подключение к Socket.IO и установка обработчиков событий
     useEffect(() => {
         socket.emit('join', { chat_id: chatId, username: user?.username || '' });
         fetchMessages();
@@ -105,16 +112,16 @@ function ChatPage({ user }) {
 
         const handleReceiveMessage = (data) => {
             if (mountedRef.current) {
-                setMessages(prev => [...prev, data]);
+                setMessages((prev) => [...prev, data]);
             }
         };
 
         const handleReceiveReaction = (data) => {
             const { message_id, user_id, reaction } = data;
             if (mountedRef.current) {
-                setMessageReactions(prev => {
+                setMessageReactions((prev) => {
                     const oldReactions = prev[message_id] || [];
-                    const filtered = oldReactions.filter(r => r.user_id !== user_id);
+                    const filtered = oldReactions.filter((r) => r.user_id !== user_id);
                     filtered.push({ user_id, reaction });
                     return { ...prev, [message_id]: filtered };
                 });
@@ -125,7 +132,6 @@ function ChatPage({ user }) {
             console.log('Notification settings updated:', data);
         };
 
-        // Обработка статуса с использованием timeoutRef
         const handleStatus = (data) => {
             if (mountedRef.current) {
                 setStatus(data.message);
@@ -138,13 +144,13 @@ function ChatPage({ user }) {
 
         const handleMessageDeletedForAll = (data) => {
             if (mountedRef.current) {
-                setMessages(prev => prev.filter(msg => msg.id !== data.message_id));
+                setMessages((prev) => prev.filter((msg) => msg.id !== data.message_id));
             }
         };
 
         const handleMessageDeletedForUser = (data) => {
             if (mountedRef.current && data.user_id === user.id) {
-                setMessages(prev => prev.filter(msg => msg.id !== data.message_id));
+                setMessages((prev) => prev.filter((msg) => msg.id !== data.message_id));
             }
         };
 
@@ -167,6 +173,7 @@ function ChatPage({ user }) {
         };
     }, [chatId, user, fetchMessages, fetchReactions, fetchUserChats, navigate]);
 
+    // Отправка сообщения
     const sendMessage = async () => {
         const safeInput = sanitizeInput(input);
         if (!safeInput && !file) return;
@@ -178,7 +185,7 @@ function ChatPage({ user }) {
                 formData.append('file', file);
                 const res = await fetch('http://localhost:5000/upload', {
                     method: 'POST',
-                    body: formData
+                    body: formData,
                 });
                 const uploadData = await res.json();
                 media_filename = uploadData.filename;
@@ -192,13 +199,14 @@ function ChatPage({ user }) {
             chat_id: chatId,
             sender_id: user.id,
             content: safeInput,
-            media_filename
+            media_filename,
         });
 
         setInput('');
         setFile(null);
     };
 
+    // Отправка сообщения при нажатии Enter
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -206,28 +214,28 @@ function ChatPage({ user }) {
         }
     };
 
+    // Отправка реакции
     const sendReaction = (messageId, reaction) => {
         socket.emit('send_reaction', {
             chat_id: chatId,
             message_id: messageId,
             user_id: user.id,
-            reaction
+            reaction,
         });
         setMenuOpenForMsgId(null);
     };
 
+    // Модальное окно пересылки
     const openForwardModal = (messageId) => {
         setForwardMessageId(messageId);
         setForwardModalOpen(true);
         setMenuOpenForMsgId(null);
     };
-
     const closeForwardModal = () => {
         setForwardModalOpen(false);
         setForwardMessageId(null);
         setSelectedChatId('');
     };
-
     const confirmForward = async () => {
         if (!selectedChatId || !forwardMessageId) return;
         try {
@@ -237,8 +245,8 @@ function ChatPage({ user }) {
                 body: JSON.stringify({
                     message_id: forwardMessageId,
                     to_chat_id: parseInt(selectedChatId, 10),
-                    user_id: user.id
-                })
+                    user_id: user.id,
+                }),
             });
             const data = await res.json();
             if (data.status !== 'success') {
@@ -250,19 +258,18 @@ function ChatPage({ user }) {
         closeForwardModal();
     };
 
+    // Модальное окно ответа
     const openReplyModal = (messageId) => {
         setReplyTargetId(messageId);
         setReplyContent('');
         setReplyModalOpen(true);
         setMenuOpenForMsgId(null);
     };
-
     const closeReplyModal = () => {
         setReplyModalOpen(false);
         setReplyTargetId(null);
         setReplyContent('');
     };
-
     const confirmReply = () => {
         if (!replyTargetId) return;
         const safeContent = sanitizeInput(replyContent);
@@ -271,11 +278,12 @@ function ChatPage({ user }) {
             sender_id: user.id,
             content: safeContent,
             media_filename: null,
-            reply_to_id: replyTargetId
+            reply_to_id: replyTargetId,
         });
         closeReplyModal();
     };
 
+    // Удаление сообщения
     const deleteMessage = async (messageId, forAll = false) => {
         const mode = forAll ? 'everyone' : 'me';
         const url = `http://localhost:5000/messages/${messageId}?mode=${mode}&user_id=${user.id}`;
@@ -293,10 +301,12 @@ function ChatPage({ user }) {
         setMenuOpenForMsgId(null);
     };
 
+    // Переключение меню для сообщения
     const toggleMenuForMessage = (msgId) => {
-        setMenuOpenForMsgId(prev => (prev === msgId ? null : msgId));
+        setMenuOpenForMsgId((prev) => (prev === msgId ? null : msgId));
     };
 
+    // Функция для отображения медиа
     const renderMedia = (filename) => {
         if (!filename) return null;
         const ext = filename.split('.').pop().toLowerCase();
@@ -317,99 +327,78 @@ function ChatPage({ user }) {
         );
     };
 
+    // Включение/отключение уведомлений
     const updateNotification = () => {
         setNotification(!notification);
         socket.emit('update_notification', {
             chat_id: chatId,
             user_id: user.id,
-            notifications_enabled: !notification
+            notifications_enabled: !notification,
         });
     };
 
+    // Поиск оригинального сообщения (для ответов)
     const findOriginalMessage = (reply_to_id) => {
-        return messages.find(m => m.id === reply_to_id) || null;
+        return messages.find((m) => m.id === reply_to_id) || null;
     };
 
     return (
-        <div className="container">
-            <button onClick={() => navigate('/chats')}>← Назад к списку чатов</button>
-            <h2>TeamForge</h2>
-            <button onClick={updateNotification}>
-                {notification ? 'Отключить' : 'Включить'} уведомления
-            </button>
-            {status && <p className="status-message">{status}</p>}
+        <div className="chat-page container">
+            <div className="chat-header">
+                <button className="back-button" onClick={() => navigate('/chats')}>
+                    ← Назад к списку чатов
+                </button>
+                <h2 className="chat-title">TeamForge</h2>
+                <button className="notify-toggle" onClick={updateNotification}>
+                    {notification ? 'Отключить' : 'Включить'} уведомления
+                </button>
+                {status && <p className="status-message">{status}</p>}
+            </div>
 
-            <div className="form-group">
+            <div className="search-bar form-group">
                 <input
                     type="search"
                     placeholder="Поиск сообщений..."
                     value={search}
-                    onChange={e => setSearch(e.target.value)}
+                    onChange={(e) => setSearch(e.target.value)}
                 />
                 <button onClick={fetchMessages}>Искать</button>
             </div>
 
             <div className="chat-container">
-                {messages.map(msg => {
+                {messages.map((msg) => {
                     const original = msg.reply_to_id ? findOriginalMessage(msg.reply_to_id) : null;
                     return (
-                        <div
-                            className="message"
-                            key={msg.id}
-                            onClick={() => toggleMenuForMessage(msg.id)}
-                            style={{ position: 'relative', cursor: 'pointer' }}
-                        >
+                        <div className="message" key={msg.id} onClick={() => toggleMenuForMessage(msg.id)}>
                             {msg.forwarded_from_id && (
-                                <div style={{ fontSize: '0.9em', color: '#666', marginBottom: '5px' }}>
+                                <div className="forwarded-label">
                                     Переслано от пользователя {msg.forwarded_from_id}
                                 </div>
                             )}
-
                             {msg.reply_to_id && (
-                                <div style={{ fontSize: '0.9em', color: '#666', marginBottom: '5px' }}>
+                                <div className="reply-label">
                                     Ответ на сообщение #{msg.reply_to_id}{' '}
-                                    {original && (
-                                        <em>({original.content ? original.content.slice(0, 30) : '...'}...)</em>
-                                    )}
+                                    {original && <em>({original.content ? original.content.slice(0, 30) : '...'}...)</em>}
                                 </div>
                             )}
-
-                            <strong>Пользователь {msg.sender_id}:</strong> {msg.content}
-
-                            {msg.media_filename && (
-                                <div>
-                                    {renderMedia(msg.media_filename)}
-                                </div>
-                            )}
-
+                            <strong className="message-sender">Пользователь {msg.sender_id}:</strong>
+                            <span className="message-text"> {msg.content}</span>
+                            {msg.media_filename && <div className="message-media">{renderMedia(msg.media_filename)}</div>}
                             {messageReactions[msg.id]?.length > 0 && (
-                                <div style={{ marginTop: '5px' }}>
+                                <div className="reactions-block">
                                     {messageReactions[msg.id].map((r, index) => (
-                                        <div key={index}>
+                                        <div key={index} className="reaction-item">
                                             Пользователь {r.user_id} поставил {r.reaction}
                                         </div>
                                     ))}
                                 </div>
                             )}
-
-                            <div className="small-text">
+                            <div className="small-text message-timestamp">
                                 {new Date(msg.timestamp).toLocaleString()}
                             </div>
 
                             {menuOpenForMsgId === msg.id && (
-                                <div
-                                    style={{
-                                        position: 'absolute',
-                                        top: '40px',
-                                        left: '10px',
-                                        background: '#fff',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        padding: '10px',
-                                        zIndex: 10
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
-                                >
+                                <div className="message-menu" onClick={(e) => e.stopPropagation()}>
                                     <button onClick={() => sendReaction(msg.id, '👍')}>Реакция: 👍</button>
                                     <button onClick={() => sendReaction(msg.id, '❤️')}>Реакция: ❤️</button>
                                     <button onClick={() => openForwardModal(msg.id)}>Переслать</button>
@@ -423,38 +412,33 @@ function ChatPage({ user }) {
                 })}
             </div>
 
-            <div className="form-group">
+            <div className="chat-input form-group">
                 <input
                     type="text"
                     placeholder="Введите сообщение..."
                     value={input}
-                    onChange={e => setInput(e.target.value)}
+                    onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
                 />
-                <input
-                    type="file"
-                    onChange={e => setFile(e.target.files[0])}
-                />
+                <input type="file" onChange={(e) => setFile(e.target.files[0])} />
             </div>
-            <button onClick={sendMessage}>Отправить</button>
+            <button className="send-button" onClick={sendMessage}>
+                Отправить
+            </button>
 
             {forwardModalOpen && (
-                <div style={modalStyle}>
-                    <div style={modalContentStyle}>
+                <div className="modal-overlay">
+                    <div className="modal-content">
                         <h3>Переслать сообщение</h3>
                         <p>Выберите чат, куда переслать сообщение #{forwardMessageId}:</p>
-                        <select
-                            value={selectedChatId}
-                            onChange={(e) => setSelectedChatId(e.target.value)}
-                        >
+                        <select value={selectedChatId} onChange={(e) => setSelectedChatId(e.target.value)}>
                             <option value="">-- Выберите чат --</option>
-                            {availableChats.map(chat => (
+                            {availableChats.map((chat) => (
                                 <option key={chat.id} value={chat.id}>
                                     {chat.name} (ID: {chat.id})
                                 </option>
                             ))}
                         </select>
-
                         <div style={{ marginTop: '10px', textAlign: 'right' }}>
                             <button onClick={confirmForward}>Переслать</button>
                             <button onClick={closeForwardModal} style={{ marginLeft: '10px' }}>
@@ -466,8 +450,8 @@ function ChatPage({ user }) {
             )}
 
             {replyModalOpen && (
-                <div style={modalStyle}>
-                    <div style={modalContentStyle}>
+                <div className="modal-overlay">
+                    <div className="modal-content">
                         <h3>Ответ на сообщение #{replyTargetId}</h3>
                         <textarea
                             rows="4"
@@ -488,23 +472,5 @@ function ChatPage({ user }) {
         </div>
     );
 }
-
-const modalStyle = {
-    position: 'fixed',
-    top: 0, left: 0, right: 0, bottom: 0,
-    background: 'rgba(0,0,0,0.6)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000
-};
-
-const modalContentStyle = {
-    background: '#fff',
-    padding: '20px',
-    borderRadius: '8px',
-    minWidth: '300px',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.3)'
-};
 
 export default ChatPage;
