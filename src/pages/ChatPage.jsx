@@ -1,5 +1,5 @@
-/* ------------------- pages/ChatPage.jsx ------------------- */
-import React, { useState, useEffect, useCallback } from 'react';
+// ChatPage.jsx
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
 
@@ -16,7 +16,6 @@ function sanitizeInput(value) {
 function ChatPage({ user }) {
     const { chatId } = useParams();
     const navigate = useNavigate();
-
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [file, setFile] = useState(null);
@@ -26,19 +25,27 @@ function ChatPage({ user }) {
 
     const [messageReactions, setMessageReactions] = useState({});
     const [menuOpenForMsgId, setMenuOpenForMsgId] = useState(null);
-
     const [replyModalOpen, setReplyModalOpen] = useState(false);
     const [replyTargetId, setReplyTargetId] = useState(null);
     const [replyContent, setReplyContent] = useState('');
-
     const [forwardModalOpen, setForwardModalOpen] = useState(false);
     const [forwardMessageId, setForwardMessageId] = useState(null);
     const [availableChats, setAvailableChats] = useState([]);
     const [selectedChatId, setSelectedChatId] = useState('');
 
+    // Добавляем ref, чтобы отслеживать, смонтирован ли компонент
+    const mountedRef = useRef(true);
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+        };
+    }, []);
+
     useEffect(() => {
         if (!user) {
             navigate('/');
+            return;
         }
     }, [user, navigate]);
 
@@ -50,7 +57,11 @@ function ChatPage({ user }) {
         }
         fetch(url)
             .then(res => res.json())
-            .then(data => setMessages(data))
+            .then(data => {
+                if (mountedRef.current) {
+                    setMessages(data);
+                }
+            })
             .catch(err => console.error('Ошибка при загрузке сообщений:', err));
     }, [chatId, search, user.id]);
 
@@ -58,7 +69,9 @@ function ChatPage({ user }) {
         fetch(`http://localhost:5000/reactions/${chatId}`)
             .then(res => res.json())
             .then(data => {
-                setMessageReactions(data);
+                if (mountedRef.current) {
+                    setMessageReactions(data);
+                }
             })
             .catch(() => {
                 // Если эндпоинта нет - игнорируем
@@ -69,7 +82,11 @@ function ChatPage({ user }) {
         if (!user) return;
         fetch(`http://localhost:5000/user_chats/${user.id}`)
             .then(res => res.json())
-            .then(chats => setAvailableChats(chats))
+            .then(chats => {
+                if (mountedRef.current) {
+                    setAvailableChats(chats);
+                }
+            })
             .catch(err => console.error('Ошибка при загрузке чатов пользователя:', err));
     }, [user]);
 
@@ -80,17 +97,21 @@ function ChatPage({ user }) {
         fetchUserChats();
 
         const handleReceiveMessage = (data) => {
-            setMessages(prev => [...prev, data]);
+            if (mountedRef.current) {
+                setMessages(prev => [...prev, data]);
+            }
         };
 
         const handleReceiveReaction = (data) => {
             const { message_id, user_id, reaction } = data;
-            setMessageReactions(prev => {
-                const oldReactions = prev[message_id] || [];
-                const filtered = oldReactions.filter(r => r.user_id !== user_id);
-                filtered.push({ user_id, reaction });
-                return { ...prev, [message_id]: filtered };
-            });
+            if (mountedRef.current) {
+                setMessageReactions(prev => {
+                    const oldReactions = prev[message_id] || [];
+                    const filtered = oldReactions.filter(r => r.user_id !== user_id);
+                    filtered.push({ user_id, reaction });
+                    return { ...prev, [message_id]: filtered };
+                });
+            }
         };
 
         const handleNotificationUpdated = (data) => {
@@ -98,16 +119,22 @@ function ChatPage({ user }) {
         };
 
         const handleStatus = (data) => {
-            setStatus(data.message);
-            setTimeout(() => setStatus(''), 3000);
+            if (mountedRef.current) {
+                setStatus(data.message);
+                setTimeout(() => {
+                    if (mountedRef.current) setStatus('');
+                }, 3000);
+            }
         };
 
         const handleMessageDeletedForAll = (data) => {
-            setMessages(prev => prev.filter(msg => msg.id !== data.message_id));
+            if (mountedRef.current) {
+                setMessages(prev => prev.filter(msg => msg.id !== data.message_id));
+            }
         };
 
         const handleMessageDeletedForUser = (data) => {
-            if (data.user_id === user.id) {
+            if (mountedRef.current && data.user_id === user.id) {
                 setMessages(prev => prev.filter(msg => msg.id !== data.message_id));
             }
         };
@@ -128,7 +155,7 @@ function ChatPage({ user }) {
             socket.off('message_deleted_for_all', handleMessageDeletedForAll);
             socket.off('message_deleted_for_user', handleMessageDeletedForUser);
         };
-    }, [chatId, user, fetchMessages, fetchReactions, fetchUserChats]);
+    }, [chatId, user, fetchMessages, fetchReactions, fetchUserChats, navigate]);
 
     const sendMessage = async () => {
         const safeInput = sanitizeInput(input);
@@ -204,9 +231,8 @@ function ChatPage({ user }) {
                 })
             });
             const data = await res.json();
-            if (data.status === 'success') {
-            } else {
-                alert(`Ошибка пересылки: ${data.message}`);
+            if (data.status !== 'success') {
+                console.error(`Ошибка пересылки: ${data.message}`);
             }
         } catch (error) {
             console.error('Ошибка пересылки:', error);
@@ -249,7 +275,7 @@ function ChatPage({ user }) {
             if (data.status === 'success') {
                 await fetchMessages();
             } else {
-                alert(`Ошибка удаления: ${data.message}`);
+                console.error(`Ошибка удаления: ${data.message}`);
             }
         } catch (error) {
             console.error('Ошибка удаления сообщения:', error);
