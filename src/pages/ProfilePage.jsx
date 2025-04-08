@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 function ProfilePage({ user, onLogout }) {
@@ -12,78 +12,74 @@ function ProfilePage({ user, onLogout }) {
     const [searchResults, setSearchResults] = useState([]);
     const [callHistory, setCallHistory] = useState([]);
 
-    // Функции-загрузчики данных оборачиваются в useCallback, чтобы не создавать их заново
+    // Глобальный реф для отслеживания монтирования компонента
+    const mountedRef = useRef(true);
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+        };
+    }, []);
+
+    // Загрузить данные профиля
     const loadProfileData = useCallback(() => {
-        // Создаем флаг монтирования
-        let isMounted = true;
         fetch(`http://localhost:5000/profile_data/${user.id}`)
             .then(res => res.json())
             .then(data => {
-                if (isMounted) {
+                if (mountedRef.current) {
                     setChatsCount(data.chats_count);
                     setMessagesCount(data.messages_count);
                     setDocs(data.docs);
                 }
             })
             .catch(error => console.error('Ошибка получения данных профиля:', error));
-
-        return () => { isMounted = false; };
     }, [user.id]);
 
+    // Загрузить друзей
     const loadFriends = useCallback(() => {
-        let isMounted = true;
         fetch(`http://localhost:5000/friends/${user.id}`)
             .then(res => res.json())
             .then(data => {
-                if (isMounted) setFriends(data);
+                if (mountedRef.current) {
+                    setFriends(data);
+                }
             })
             .catch(error => console.error('Ошибка получения друзей:', error));
-
-        return () => { isMounted = false; };
     }, [user.id]);
 
+    // Загрузить входящие запросы в друзья
     const loadFriendRequests = useCallback(() => {
-        let isMounted = true;
         fetch(`http://localhost:5000/friend_requests/${user.id}`)
             .then(res => res.json())
             .then(data => {
-                if (isMounted) setFriendRequests(data);
+                if (mountedRef.current) {
+                    setFriendRequests(data);
+                }
             })
             .catch(error => console.error('Ошибка получения запросов в друзья:', error));
-
-        return () => { isMounted = false; };
     }, [user.id]);
 
+    // Загрузить историю звонков
     const loadCallHistory = useCallback(() => {
-        let isMounted = true;
         fetch(`http://localhost:5000/call_history/${user.id}`)
             .then(res => res.json())
             .then(data => {
-                if (isMounted) setCallHistory(data);
+                if (mountedRef.current) {
+                    setCallHistory(data);
+                }
             })
             .catch(error => console.error('Ошибка получения истории звонков:', error));
-
-        return () => { isMounted = false; };
     }, [user.id]);
 
-    // useEffect запускается при загрузке и когда изменяется пользователь или его id
     useEffect(() => {
         if (!user) {
             navigate('/');
             return;
         }
-        // Монтирование: запускаем загрузку данных
-        const cleanupProfileData = loadProfileData();
-        const cleanupFriends = loadFriends();
-        const cleanupFriendReq = loadFriendRequests();
-        const cleanupCallHistory = loadCallHistory();
-        // Функция очистки
-        return () => {
-            cleanupProfileData();
-            cleanupFriends();
-            cleanupFriendReq();
-            cleanupCallHistory();
-        };
+        loadProfileData();
+        loadFriends();
+        loadFriendRequests();
+        loadCallHistory();
     }, [user, navigate, loadProfileData, loadFriends, loadFriendRequests, loadCallHistory]);
 
     // Поиск пользователей для добавления в друзья
@@ -93,7 +89,9 @@ function ProfilePage({ user, onLogout }) {
                 .then(res => res.json())
                 .then(data => {
                     const filtered = data.filter(u => u.id !== user.id && !friends.some(f => f.id === u.id));
-                    setSearchResults(filtered);
+                    if (mountedRef.current) {
+                        setSearchResults(filtered);
+                    }
                 })
                 .catch(error => console.error('Ошибка поиска пользователей:', error));
         } else {
@@ -101,7 +99,7 @@ function ProfilePage({ user, onLogout }) {
         }
     };
 
-    // Функция для отправки запроса на добавление друга
+    // Отправка запроса на добавление друга
     const addFriend = (receiverId) => {
         const body = { requester_id: user.id, receiver_id: receiverId };
         fetch('http://localhost:5000/friend_request', {
@@ -116,7 +114,7 @@ function ProfilePage({ user, onLogout }) {
             .catch(error => console.error('Ошибка при добавлении в друзья:', error));
     };
 
-    // Функции подтверждения и отклонения входящих запросов в друзья
+    // Подтверждение запроса в друзья
     const confirmFriendRequest = (friendRequestId) => {
         fetch('http://localhost:5000/friend_request/confirm', {
             method: 'POST',
@@ -132,6 +130,7 @@ function ProfilePage({ user, onLogout }) {
             .catch(error => console.error('Ошибка подтверждения запроса в друзья:', error));
     };
 
+    // Отклонение запроса в друзья
     const rejectFriendRequest = (friendRequestId) => {
         fetch('http://localhost:5000/friend_request/reject', {
             method: 'POST',
@@ -146,7 +145,7 @@ function ProfilePage({ user, onLogout }) {
             .catch(error => console.error('Ошибка отклонения запроса в друзья:', error));
     };
 
-    // Функция удаления друга
+    // Удаление друга
     const removeFriend = (friendId) => {
         fetch(`http://localhost:5000/friendship?user_id=${user.id}&friend_id=${friendId}`, {
             method: 'DELETE'
