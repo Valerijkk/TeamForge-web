@@ -1,5 +1,6 @@
+// RegisterPage.jsx
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 function RegisterPage({ setUser }) {
     const [username, setUsername] = useState('');
@@ -8,7 +9,7 @@ function RegisterPage({ setUser }) {
 
     const registerAndLogin = async () => {
         if (!username.trim() || !password.trim()) {
-            alert('Введите имя и пароль.');
+            console.error('Введите имя и пароль');
             return;
         }
         try {
@@ -30,10 +31,10 @@ function RegisterPage({ setUser }) {
                     setUser({ id: loginData.user_id, username });
                     navigate('/chats');
                 } else {
-                    alert('Ошибка входа: ' + loginData.message);
+                    console.error('Ошибка входа: ' + loginData.message);
                 }
             } else {
-                alert(data.message);
+                console.error(data.message);
             }
         } catch (error) {
             console.error('Ошибка при регистрации:', error);
@@ -41,9 +42,7 @@ function RegisterPage({ setUser }) {
     };
 
     const handleKeyDown = (e) => {
-        if (e.key === 'Enter') {
-            registerAndLogin();
-        }
+        if (e.key === 'Enter') registerAndLogin();
     };
 
     return (
@@ -68,6 +67,12 @@ function RegisterPage({ setUser }) {
                 />
             </div>
             <button onClick={registerAndLogin}>Зарегистрироваться</button>
+            <p>
+                Уже зарегистрированы? <Link to="/login">Войти</Link>
+            </p>
+            <p>
+                Забыли пароль? <Link to="/reset-password">Сбросить пароль</Link>
+            </p>
         </div>
     );
 }
