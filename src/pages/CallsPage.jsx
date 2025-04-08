@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
+import './CallsPage.css'; // Подключение файла стилей для звонков
 
 const socket = io('http://localhost:5000');
 
@@ -310,17 +311,21 @@ function CallsPage({ user }) {
     };
 
     return (
-        <div className="container">
+        <div className="calls-page-container container">
             <h2>Звонки</h2>
+
+            {/* Входящий звонок */}
             {!callActive && incomingCall && (
-                <div style={{ padding: '10px', border: '1px solid #ccc', marginBottom: '20px' }}>
+                <div className="incoming-call-alert">
                     <p>Входящий звонок от пользователя ID {incomingCall.from}</p>
                     <button onClick={acceptIncomingCall}>Принять звонок</button>
                 </div>
             )}
+
+            {/* Выбор типа звонка */}
             {!callActive && !incomingCall && (
                 <>
-                    <div>
+                    <div className="call-type-choice">
                         <label>
                             <input
                                 type="radio"
@@ -328,20 +333,24 @@ function CallsPage({ user }) {
                                 value="personal"
                                 checked={callType === "personal"}
                                 onChange={() => setCallType("personal")}
-                            /> Личный звонок
+                            />
+                            Личный звонок
                         </label>
-                        <label style={{ marginLeft: '20px' }}>
+                        <label>
                             <input
                                 type="radio"
                                 name="callType"
                                 value="group"
                                 checked={callType === "group"}
                                 onChange={() => setCallType("group")}
-                            /> Групповой звонок
+                            />
+                            Групповой звонок
                         </label>
                     </div>
+
+                    {/* Если личный звонок */}
                     {callType === "personal" && (
-                        <div>
+                        <div className="select-user-block">
                             <h3>Выберите пользователя для звонка:</h3>
                             <select onChange={(e) => setSelectedUser(e.target.value)} defaultValue="">
                                 <option value="" disabled>Выберите пользователя</option>
@@ -351,38 +360,44 @@ function CallsPage({ user }) {
                             </select>
                         </div>
                     )}
+
+                    {/* Если групповой звонок */}
                     {callType === "group" && (
-                        <div>
+                        <div className="select-user-block">
                             <h3>Выберите участников группового звонка:</h3>
                             {allUsers.map(u => (
-                                <div key={u.id}>
-                                    <label>
-                                        <input
-                                            type="checkbox"
-                                            value={u.id}
-                                            checked={selectedUsers.includes(u.id.toString())}
-                                            onChange={(e) => {
-                                                const id = u.id.toString();
-                                                if (e.target.checked) {
-                                                    setSelectedUsers(prev => [...prev, id]);
-                                                } else {
-                                                    setSelectedUsers(prev => prev.filter(uid => uid !== id));
-                                                }
-                                            }}
-                                        /> {u.username}
-                                    </label>
-                                </div>
+                                <label key={u.id}>
+                                    <input
+                                        type="checkbox"
+                                        value={u.id}
+                                        checked={selectedUsers.includes(u.id.toString())}
+                                        onChange={(e) => {
+                                            const id = u.id.toString();
+                                            if (e.target.checked) {
+                                                setSelectedUsers(prev => [...prev, id]);
+                                            } else {
+                                                setSelectedUsers(prev => prev.filter(uid => uid !== id));
+                                            }
+                                        }}
+                                    />
+                                    {u.username}
+                                </label>
                             ))}
                         </div>
                     )}
-                    <button onClick={startCall} style={{ marginTop: '20px' }}>Начать звонок (голосовой)</button>
+
+                    <button onClick={startCall} className="start-call-button">
+                        Начать звонок (голосовой)
+                    </button>
                 </>
             )}
+
+            {/* Звонок идет */}
             {callActive && (
-                <div>
+                <div className="call-active-block">
                     <h3>Звонок идет...</h3>
-                    <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-                        <div style={{ marginRight: '20px' }}>
+                    <div className="video-streams-container">
+                        <div className="video-block">
                             <h4>Ваш поток</h4>
                             {localStreamRef.current && (
                                 <video
@@ -394,12 +409,11 @@ function CallsPage({ user }) {
                                             video.srcObject = localStreamRef.current;
                                         }
                                     }}
-                                    style={{ width: "300px" }}
-                                ></video>
+                                />
                             )}
                         </div>
                         {Object.keys(remoteStreams).map(peerId => (
-                            <div key={peerId} style={{ marginRight: '20px' }}>
+                            <div className="video-block" key={peerId}>
                                 <h4>Пользователь {peerId}</h4>
                                 <video
                                     autoPlay
@@ -409,19 +423,20 @@ function CallsPage({ user }) {
                                             video.srcObject = remoteStreams[peerId];
                                         }
                                     }}
-                                    style={{ width: "300px" }}
-                                ></video>
+                                />
                             </div>
                         ))}
                     </div>
-                    <div style={{ marginTop: '20px' }}>
-                        <button onClick={toggleWebcam}>
+                    <div className="call-controls">
+                        <button onClick={toggleWebcam} className="toggle-webcam-btn">
                             {isWebcamOn ? 'Выключить вебкамеру' : 'Включить вебкамеру'}
                         </button>
-                        <button onClick={toggleScreenShare} style={{ marginLeft: '10px' }}>
+                        <button onClick={toggleScreenShare} className="toggle-share-btn">
                             {isScreenSharingOn ? 'Выключить демонстрацию' : 'Включить демонстрацию экрана'}
                         </button>
-                        <button onClick={endCall} style={{ marginLeft: '10px' }}>Завершить звонок</button>
+                        <button onClick={endCall} className="end-call-btn">
+                            Завершить звонок
+                        </button>
                     </div>
                 </div>
             )}
