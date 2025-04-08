@@ -1,0 +1,109 @@
+/* SoftwarePage.css */
+
+/* Основной контейнер страницы ПО */
+.software-page {
+    margin-top: 20px;
+    margin-bottom: 40px;
+}
+
+/* Заголовок */
+.software-title {
+    margin-bottom: 1.5rem;
+    font-size: 1.8rem;
+    color: #007BFF;
+}
+
+/* Обёртка для карточек */
+.software-cards-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    /* или можно использовать justify-content: ... для центровки */
+}
+
+/* Каждая карточка ПО */
+.software-card {
+    width: 300px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 1rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Анимации при наведении */
+.software-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 2px 15px rgba(0,0,0,0.07);
+}
+
+/* Изображение */
+.software-image {
+    width: 100%;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    object-fit: cover; /* если хотим обрезать лишнее */
+}
+
+/* Заголовок карточки */
+.software-card-title {
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+    color: #333;
+}
+
+/* Описание */
+.software-card-desc {
+    font-size: 0.95rem;
+    color: #555;
+    margin-bottom: 0.5rem;
+}
+
+/* Ссылка на GitHub */
+.software-github-link {
+    display: inline-block;
+    margin-bottom: 0.5rem;
+    color: #007BFF;
+    text-decoration: none;
+    font-weight: 500;
+}
+.software-github-link:hover {
+    text-decoration: underline;
+}
+
+/* Кнопки для админа */
+.software-admin-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Обёртка для формы */
+.software-form-wrapper {
+    margin-top: 2rem;
+    padding: 1rem;
+    background-color: #fff;
+    border-radius: 8px;
+}
+
+/* Стили формы */
+.software-form input[type="text"],
+.software-form textarea {
+    width: 100%;
+    padding: 0.5rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.software-form button[type="submit"] {
+    padding: 8px 16px;
+    background-color: #007BFF;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.software-form button[type="submit"]:hover {
+    background-color: #0056b3;
+}
