@@ -22,45 +22,45 @@ const knowledgeArticles = [
     },
     {
         id: 4,
-        title: 'Основы Responsive Design',
-        description: 'Как создавать адаптивные веб-страницы, которые хорошо отображаются на разных устройствах.',
-        link: 'https://www.smashingmagazine.com/2011/01/guidelines-for-responsive-web-design/'
+        title: 'Python: основы',
+        description: 'Введение в язык Python, его синтаксис и базовые концепции программирования.',
+        link: 'https://docs.python.org/3/tutorial/index.html'
     },
     {
         id: 5,
-        title: 'Flexbox: Управление раскладкой',
-        description: 'Как использовать CSS Flexbox для создания гибких и адаптивных макетов.',
-        link: 'https://css-tricks.com/snippets/css/a-guide-to-flexbox/'
+        title: 'Django: создание веб-приложений',
+        description: 'Ознакомление с фреймворком Django для разработки полнофункциональных веб-приложений.',
+        link: 'https://confar.github.io/blog/2017/11/13/django-auth-app/'
     },
     {
         id: 6,
-        title: 'Grid Layout: Современные возможности CSS',
-        description: 'Подробное руководство по использованию CSS Grid Layout для построения сеток.',
-        link: 'https://css-tricks.com/snippets/css/complete-guide-grid/'
+        title: 'Flask: легковесный фреймворк',
+        description: 'Основы работы с Flask для создания небольших, быстрых веб-приложений.',
+        link: 'https://flask.palletsprojects.com/en/2.2.x/'
     },
     {
         id: 7,
-        title: 'Работа с API в JavaScript',
-        description: 'Как получить данные с помощью fetch API и работать с RESTful сервисами.',
-        link: 'https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch'
+        title: 'Data Science: анализ данных',
+        description: 'Ключевые методы анализа данных, визуализации и интерпретации результатов.',
+        link: 'https://vinesmsuic.github.io/datascience/'
     },
     {
         id: 8,
-        title: 'Modern JavaScript (ES6+)',
-        description: 'Новые возможности языка JavaScript: стрелочные функции, промисы, async/await, и многое другое.',
-        link: 'https://www.freecodecamp.org/news/learn-es6-with-examples/'
+        title: 'Machine Learning: введение',
+        description: 'Основные алгоритмы машинного обучения и примеры их применения.',
+        link: 'https://deepmachinelearning.ru/docs/Machine-learning/intro'
     },
     {
         id: 9,
-        title: 'Accessibility в веб-разработке',
-        description: 'Основы доступности для создания инклюзивных веб-сайтов.',
-        link: 'https://www.w3.org/WAI/fundamentals/accessibility-intro/'
+        title: 'DevOps: CI/CD и автоматизация',
+        description: 'Принципы DevOps, методологии CI/CD и автоматизации процессов разработки.',
+        link: 'https://pro-dgtl.ru/blog/razrabotka/tpost/loxxxzp5c1-cicd-chto-eto-takoe-soveti-i-primeri'
     },
     {
         id: 10,
         title: 'Основы Git и GitHub',
         description: 'Как использовать систему контроля версий Git и платформу GitHub для совместной работы над проектами.',
-        link: 'https://guides.github.com/introduction/git-handbook/'
+        link: 'https://drstearns.github.io/tutorials/git/'
     }
 ];
 
@@ -68,14 +68,14 @@ function KnowledgeBasePage() {
     const [expandedArticleId, setExpandedArticleId] = useState(null);
 
     const toggleArticle = (id) => {
-        setExpandedArticleId((prev) => (prev === id ? null : id));
+        setExpandedArticleId(prev => (prev === id ? null : id));
     };
 
     return (
         <div className="container knowledge-container">
             <h2 className="knowledge-title">База знаний</h2>
             <ul className="knowledge-list">
-                {knowledgeArticles.map((article) => (
+                {knowledgeArticles.map(article => (
                     <li key={article.id} className="knowledge-item">
                         <h3>{article.title}</h3>
                         <p>{article.description}</p>
