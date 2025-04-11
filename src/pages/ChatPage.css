@@ -36,7 +36,7 @@
     font-size: 24px;
     color: #007BFF;
     margin: 0;
-    flex: 1; /* занимает оставшееся пространство */
+    flex: 1;
 }
 
 /* Кнопка уведомлений */
@@ -77,11 +77,8 @@
     padding: 10px;
     background-color: #fff;
     margin-bottom: 1rem;
-
-    /* Вместо фиксированной высоты и overflow-y:
-       пусть контент растягивает страницу, меню не будет обрезаться */
-    max-height: none;      /* или уберите вообще */
-    overflow: visible;     /* критично, чтобы меню "вылезало" */
+    max-height: none;
+    overflow: visible;
 }
 
 /* Каждое сообщение */
@@ -91,7 +88,7 @@
     padding: 10px;
     margin-bottom: 10px;
     transition: box-shadow 0.3s ease;
-    position: relative; /* важно, чтобы потомки (меню) позиционировались относительно этого блока */
+    position: relative;
 }
 .message:hover {
     box-shadow: 0 0 8px rgba(0,0,0,0.06);
@@ -145,13 +142,13 @@
 .message-menu {
     position: absolute;
     top: 0;
-    left: 105%; /* смещаем вправо от блока */
-    z-index: 999999; /* достаточно высокий, чтобы перекрывать */
+    left: 105%;
+    z-index: 999999;
     background: #fff;
     border: 1px solid #ccc;
     border-radius: 4px;
     padding: 10px;
-    width: 140px; /* фиксированная ширина, чтобы кнопки не переноcились */
+    width: 140px;
     display: flex;
     flex-direction: column;
     gap: 5px;
@@ -199,7 +196,10 @@
 /* Модальные окна (пересылка, ответ) */
 .modal-overlay {
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     background: rgba(0,0,0,0.6);
     display: flex;
     align-items: center;
@@ -213,4 +213,90 @@
     border-radius: 8px;
     min-width: 300px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+/* ================================================= */
+/*              Тёмная тема (Dark Theme)            */
+/* ================================================= */
+/* Активируется, если у <body> установлен класс "dark" */
+
+body.dark .back-button {
+    background-color: #1e90ff;
+}
+body.dark .back-button:hover {
+    background-color: #187bcd;
+}
+
+body.dark .chat-title {
+    color: #1e90ff;
+}
+
+body.dark .notify-toggle {
+    background-color: #ff8c00;
+}
+body.dark .notify-toggle:hover {
+    background-color: #e67e00;
+}
+
+body.dark .status-message {
+    color: #1e90ff;
+}
+
+body.dark .chat-container {
+    background-color: #2a2a2a;
+    border: 1px solid #555;
+}
+
+body.dark .message {
+    background-color: #3a3a3a;
+}
+body.dark .message:hover {
+    box-shadow: 0 0 8px rgba(255,255,255,0.1);
+}
+
+body.dark .forwarded-label,
+body.dark .reply-label {
+    color: #aaa;
+}
+
+body.dark .message-sender {
+    color: #f0f0f0;
+}
+
+body.dark .message-text {
+    color: #ddd;
+}
+
+body.dark .reactions-block {
+    color: #aaa;
+}
+
+body.dark .message-timestamp {
+    color: #ccc;
+}
+
+body.dark .message-menu {
+    background: #2a2a2a;
+    border: 1px solid #555;
+}
+body.dark .message-menu button {
+    background-color: #444;
+}
+body.dark .message-menu button:hover {
+    background-color: #555;
+}
+
+body.dark .send-button {
+    background-color: #218838;
+}
+body.dark .send-button:hover {
+    background-color: #1e7e34;
+}
+
+/* Модальные окна */
+body.dark .modal-content {
+    background: #2a2a2a;
+    color: #f0f0f0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.6);
+    border: 1px solid #555;
 }
