@@ -58,7 +58,7 @@
     justify-content: space-between;
     background: #f7f7f7;
     margin-bottom: 5px;
-    padding: 6px 10px; /* Повыше, чем было (ранее 3px 5px) */
+    padding: 6px 10px;
     border-radius: 4px;
 }
 .friends-list button {
@@ -66,8 +66,8 @@
     color: #fff;
     border: none;
     border-radius: 4px;
-    padding: 4px 8px; /* Увеличено по сравнению с предыдущим размером 2px 4px */
-    font-size: 12px;  /* Чуть больше, чем 10px */
+    padding: 4px 8px;
+    font-size: 12px;
     cursor: pointer;
     transition: background-color 0.3s ease;
 }
@@ -87,7 +87,7 @@
 .requests-list li {
     margin-bottom: 8px;
     background: #f7f7f7;
-    padding: 6px 10px; /* Увеличено по сравнению с предыдущим размером */
+    padding: 6px 10px;
     border-radius: 4px;
     display: flex;
     flex-wrap: wrap;
@@ -99,8 +99,8 @@
     color: #fff;
     border: none;
     border-radius: 4px;
-    padding: 4px 8px;  /* Увеличено */
-    font-size: 12px;   /* Немного больше */
+    padding: 4px 8px;
+    font-size: 12px;
     cursor: pointer;
     transition: background-color 0.2s ease;
 }
@@ -121,10 +121,10 @@
 .profile-search input {
     margin-right: 6px;
     padding: 6px;
-    font-size: 14px; /* Немного увеличено */
+    font-size: 14px;
 }
 .profile-search button {
-    padding: 4px 8px; /* Увеличено по сравнению с предыдущим размером 2px 4px */
+    padding: 4px 8px;
     font-size: 12px;
     background-color: #007BFF;
     color: #fff;
@@ -186,7 +186,7 @@
     background-color: #ffa500;
     color: #fff;
     border: none;
-    padding: 6px 12px; /* Увеличено по сравнению с предыдущим размером 4px 8px */
+    padding: 6px 12px;
     border-radius: 4px;
     cursor: pointer;
     transition: background-color 0.3s ease, transform 0.2s ease;
@@ -198,4 +198,87 @@
 }
 .profile-logout button:active {
     transform: scale(0.97);
+}
+
+/* ================================================= */
+/*              Тёмная тема (Dark Theme)            */
+/* ================================================= */
+/* Активируется, если у <body> установлен класс "dark" */
+
+body.dark .profile-page {
+    background-color: #2a2a2a;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+}
+body.dark .profile-title {
+    color: #1e90ff;
+}
+body.dark .profile-info p {
+    color: #ccc;
+}
+body.dark .profile-docs a {
+    color: #1e90ff;
+}
+body.dark .profile-docs a:hover {
+    color: #63b3ff;
+}
+body.dark .friends-list li {
+    background: #3a3a3a;
+    border: 1px solid #555;
+    color: #f0f0f0;
+}
+body.dark .friends-list button {
+    background-color: #c82333;
+}
+body.dark .friends-list button:hover {
+    background-color: #a71d2a;
+}
+body.dark .requests-list li {
+    background: #3a3a3a;
+    border: 1px solid #555;
+    color: #f0f0f0;
+}
+body.dark .requests-list button {
+    background-color: #218838;
+}
+body.dark .requests-list button:hover {
+    background-color: #1e7e34;
+}
+body.dark .requests-list button:last-of-type {
+    background-color: #c82333;
+}
+body.dark .requests-list button:last-of-type:hover {
+    background-color: #a71d2a;
+}
+body.dark .profile-search input {
+    background-color: #3a3a3a;
+    border: 1px solid #555;
+    color: #f0f0f0;
+}
+body.dark .profile-search button {
+    background-color: #1e90ff;
+}
+body.dark .profile-search button:hover {
+    background-color: #187bcd;
+}
+body.dark .search-results li {
+    background: #3a3a3a;
+    border: 1px solid #555;
+    color: #f0f0f0;
+}
+body.dark .search-results button {
+    background-color: #1e90ff;
+}
+body.dark .search-results button:hover {
+    background-color: #187bcd;
+}
+body.dark .calls-list li {
+    background: #3a3a3a;
+    border: 1px solid #555;
+    color: #f0f0f0;
+}
+body.dark .profile-logout button {
+    background-color: #e69500;
+}
+body.dark .profile-logout button:hover {
+    background-color: #ff9d1e;
 }
