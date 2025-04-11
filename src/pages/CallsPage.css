@@ -188,3 +188,95 @@
 .end-call-btn:hover {
     background-color: #c82333;
 }
+
+
+/* ================================================= */
+/*              Тёмная тема (Dark Theme)            */
+/* ================================================= */
+/* Активируется, если у <body> установлен класс "dark" */
+
+body.dark .calls-page-container {
+    background-color: #333;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+body.dark .calls-page-container h2 {
+    color: #1e90ff;
+}
+
+body.dark .incoming-call-alert {
+    background-color: #444;
+    border-color: #ff8c00;
+    color: #f0f0f0;
+}
+
+body.dark .incoming-call-alert button {
+    background-color: #28a745;
+    color: #fff;
+}
+body.dark .incoming-call-alert button:hover {
+    background-color: #218838;
+}
+
+body.dark .call-type-choice,
+body.dark .call-type-choice label {
+    color: #f0f0f0;
+}
+
+body.dark .select-user-block {
+    background: #2a2a2a;
+    border: 1px solid #555;
+}
+body.dark .select-user-block h3 {
+    color: #ddd;
+}
+body.dark .select-user-block select {
+    background: #3a3a3a;
+    border: 1px solid #555;
+    color: #f0f0f0;
+}
+
+body.dark .start-call-button {
+    background-color: #1e90ff;
+}
+body.dark .start-call-button:hover {
+    background-color: #187bcd;
+}
+
+body.dark .call-active-block {
+    background: #2a2a2a;
+    border: 1px solid #555;
+}
+body.dark .call-active-block h3 {
+    color: #1e90ff;
+}
+
+body.dark .video-block {
+    background: #2a2a2a;
+    border: 1px solid #555;
+}
+body.dark .video-block h4 {
+    color: #ddd;
+}
+
+body.dark .call-controls button {
+    color: #fff;
+}
+body.dark .toggle-webcam-btn {
+    background-color: #6f42c1;
+}
+body.dark .toggle-webcam-btn:hover {
+    background-color: #59309c;
+}
+body.dark .toggle-share-btn {
+    background-color: #fd7e14;
+}
+body.dark .toggle-share-btn:hover {
+    background-color: #e96c02;
+}
+body.dark .end-call-btn {
+    background-color: #dc3545;
+}
+body.dark .end-call-btn:hover {
+    background-color: #c82333;
+}
