@@ -107,3 +107,55 @@
 .software-form button[type="submit"]:hover {
     background-color: #0056b3;
 }
+
+/* ================================================= */
+/*              Тёмная тема (Dark Theme)            */
+/* ================================================= */
+/* Активируется, если у <body> установлен класс "dark" */
+
+body.dark .software-title {
+    color: #1e90ff;
+}
+
+body.dark .software-card {
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+}
+
+body.dark .software-card:hover {
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.3);
+}
+
+body.dark .software-card-title {
+    color: #f0f0f0;
+}
+
+body.dark .software-card-desc {
+    color: #ccc;
+}
+
+body.dark .software-github-link {
+    color: #1e90ff;
+}
+body.dark .software-github-link:hover {
+    color: #63b3ff;
+}
+
+body.dark .software-form-wrapper {
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+}
+
+body.dark .software-form input[type="text"],
+body.dark .software-form textarea {
+    border: 1px solid #555;
+    background-color: #3a3a3a;
+    color: #f0f0f0;
+}
+
+body.dark .software-form button[type="submit"] {
+    background-color: #333;
+}
+body.dark .software-form button[type="submit"]:hover {
+    background-color: #555;
+}
