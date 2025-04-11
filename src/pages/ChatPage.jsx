@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
-import './ChatPage.css'; // Подключаем наш файл стилей
+import './ChatPage.css';
 
 // Создаём socket (при необходимости лучше вынести в Context)
 const socket = io('http://localhost:5000');
@@ -26,7 +26,6 @@ function ChatPage({ user }) {
     const [search, setSearch] = useState('');
     const [notification, setNotification] = useState(true);
     const [status, setStatus] = useState('');
-
     const [messageReactions, setMessageReactions] = useState({});
     const [menuOpenForMsgId, setMenuOpenForMsgId] = useState(null);
 
@@ -46,6 +45,19 @@ function ChatPage({ user }) {
         return () => {
             mountedRef.current = false;
         };
+    }, []);
+
+    // Для отслеживания состояния уведомлений в обработчике
+    const notificationRef = useRef(notification);
+    useEffect(() => {
+        notificationRef.current = notification;
+    }, [notification]);
+
+    // Запрос разрешения на показ нотификаций при загрузке компонента
+    useEffect(() => {
+        if (Notification && Notification.permission !== "granted" && Notification.permission !== "denied") {
+            Notification.requestPermission();
+        }
     }, []);
 
     // Для таймаута статуса
@@ -111,8 +123,30 @@ function ChatPage({ user }) {
         fetchUserChats();
 
         const handleReceiveMessage = (data) => {
+            // Заменяем текст системного сообщения
+            if (data.content === 'Пользователь вошел в чат') {
+                data.content = 'Пользователь не в чате';
+            }
             if (mountedRef.current) {
                 setMessages((prev) => [...prev, data]);
+            }
+            // Показываем нотификацию, если включены и сообщение от другого пользователя
+            if (notificationRef.current && data.sender_id !== user.id) {
+                if (Notification.permission === "granted") {
+                    new Notification("Новое сообщение", {
+                        body: data.content,
+                        // icon: 'path_to_icon'
+                    });
+                } else if (Notification.permission !== "denied") {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === "granted") {
+                            new Notification("Новое сообщение", {
+                                body: data.content,
+                                // icon: 'path_to_icon'
+                            });
+                        }
+                    });
+                }
             }
         };
 
