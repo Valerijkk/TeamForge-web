@@ -318,3 +318,104 @@ a {
 a:hover {
   color: #0056b3;
 }
+
+/* ================================================= */
+/*              Тёмная тема (Dark Theme)            */
+/* ================================================= */
+/* Активируется, если у <body> установлен класс "dark" */
+
+body.dark {
+  background: linear-gradient(135deg, #232526, #414345);
+  color: #f0f0f0;
+}
+
+body.dark header {
+  background: rgba(20, 20, 20, 0.95);
+  border-bottom: 1px solid #333;
+}
+
+body.dark header .logo {
+  color: #1e90ff;
+}
+
+body.dark header .menu a {
+  color: #1e90ff;
+}
+
+body.dark header .menu a:hover {
+  color: #63b3ff;
+}
+
+body.dark button {
+  background: linear-gradient(135deg, #333, #555);
+  color: #fff;
+}
+
+body.dark button:hover {
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+body.dark input[type="text"],
+body.dark input[type="password"],
+body.dark input[type="email"],
+body.dark input[type="file"],
+body.dark input[type="search"],
+body.dark textarea {
+  border: 1px solid #555;
+  background-color: #2a2a2a;
+  color: #f0f0f0;
+}
+
+body.dark input[type="text"]:focus,
+body.dark input[type="password"]:focus,
+body.dark input[type="email"]:focus,
+body.dark input[type="search"]:focus,
+body.dark textarea:focus {
+  border-color: #1e90ff;
+  box-shadow: 0 0 8px rgba(30, 144, 255, 0.3);
+}
+
+body.dark .chat-container {
+  border: 1px solid #444;
+  background-color: #2a2a2a;
+}
+
+body.dark .message {
+  background: #3a3a3a;
+}
+
+body.dark .message strong {
+  color: #f0f0f0;
+}
+
+body.dark .chat-list li {
+  border: 1px solid #444;
+  background: #2a2a2a;
+}
+
+body.dark .chat-list li:hover {
+  background: #333;
+}
+
+body.dark .profile-container {
+  background: #2a2a2a;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+}
+
+body.dark .modal-content {
+  background: #2a2a2a;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+  color: #f0f0f0;
+}
+
+body.dark .small-text {
+  color: #aaa;
+}
+
+body.dark a {
+  color: #1e90ff;
+}
+
+body.dark a:hover {
+  color: #63b3ff;
+}
