@@ -131,7 +131,6 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-
     background-color: #fff;
     border: 1px solid #ddd;
     border-radius: 6px;
@@ -197,4 +196,85 @@
     .task-item__buttons {
         margin-top: 10px;
     }
+}
+
+
+/* ================================================= */
+/*              Тёмная тема (Dark Theme)            */
+/* ================================================= */
+/* Активируется, если у <body> установлен класс "dark" */
+
+/* .my-react-calendar и его дочерние элементы */
+body.dark .my-react-calendar {
+    background-color: #2a2a2a;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+body.dark .my-react-calendar .react-calendar__navigation {
+    background: #424242;
+}
+
+body.dark .my-react-calendar .react-calendar__month-view__weekdays {
+    background: #3a3a3a;
+    color: #aaa;
+}
+
+body.dark .my-react-calendar .react-calendar__tile {
+    color: #e0e0e0;
+}
+body.dark .my-react-calendar .react-calendar__tile:hover {
+    background: #444;
+}
+
+body.dark .my-react-calendar .react-calendar__tile--now {
+    background: #3e2723;
+    border: 1px solid #ffccbc;
+    color: #eee;
+}
+
+body.dark .my-react-calendar .react-calendar__tile--active {
+    background: #303f9f;
+    color: #fff;
+}
+
+/* Родительский блок */
+body.dark .calendar-page {
+    background-color: #333;
+}
+
+/* Заголовок "Календарь задач" */
+body.dark .calendar-title {
+    color: #1e90ff;
+}
+
+/* Подзаголовки */
+body.dark .tasks-subtitle {
+    color: #1e90ff;
+}
+
+/* Плашка, если задач нет */
+body.dark .tasks-none {
+    color: #ccc;
+}
+
+/* Элемент задачи */
+body.dark .task-item {
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+}
+
+body.dark .task-item__title {
+    color: #f0f0f0;
+}
+
+body.dark .task-item__desc {
+    color: #ccc;
+}
+
+/* Кнопка "Добавить" / "Обновить" */
+body.dark .btn-add-update {
+    background-color: #218838;
+}
+body.dark .btn-add-update:hover {
+    background-color: #1e7e34;
 }
