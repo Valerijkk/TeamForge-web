@@ -19,3 +19,20 @@
     overflow: hidden;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Лёгкая тень для объёма */
 }
+
+/* ================================================= */
+/*              Тёмная тема (Dark Theme)            */
+/* ================================================= */
+/* Активируется, если у <body> установлен класс "dark" */
+
+body.dark .ai-assistant-container {
+    background-color: #2a2a2a;
+}
+
+body.dark .ai-assistant-title {
+    color: #1e90ff;
+}
+
+body.dark .ai-assistant-iframe-wrapper {
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
