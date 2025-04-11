@@ -41,7 +41,6 @@
     padding: 1rem;
     border-radius: 8px;
     margin-bottom: 0.5rem;
-
     transition: box-shadow 0.3s ease, transform 0.3s ease;
     cursor: pointer;
 }
@@ -100,4 +99,49 @@
 }
 .create-chat-btn:active {
     transform: scale(0.97);
+}
+
+
+/* ================================================= */
+/*              Тёмная тема (Dark Theme)            */
+/* ================================================= */
+/* Активируется, если у <body> установлен класс "dark" */
+
+body.dark .chats-container h2 {
+    color: #1e90ff;
+}
+
+body.dark .chats-container h3 {
+    color: #ddd;
+}
+
+body.dark .chats-container h4 {
+    color: #aaa;
+}
+
+body.dark .chat-list li {
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+    color: #f0f0f0;
+}
+
+body.dark .chats-container hr {
+    border-top: 1px solid #555;
+}
+
+body.dark .form-group input[type="text"] {
+    background-color: #3a3a3a;
+    border: 1px solid #555;
+    color: #f0f0f0;
+}
+
+body.dark .user-checkbox {
+    color: #ddd;
+}
+
+body.dark .create-chat-btn {
+    background-color: #e69500;
+}
+body.dark .create-chat-btn:hover {
+    background-color: #ff9d1e;
 }
