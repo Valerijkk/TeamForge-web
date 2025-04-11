@@ -9,7 +9,7 @@ import ProfilePage from './pages/ProfilePage';
 import ChatsPage from './pages/ChatsPage';
 import ChatPage from './pages/ChatPage';
 import CallsPage from './pages/CallsPage';
-import CalendarPage from './pages/CalendarPage'; // импортируем страницу Календаря
+import CalendarPage from './pages/CalendarPage';
 import KnowledgeBasePage from './pages/KnowledgeBasePage';
 import AIAssistantPage from './pages/AIAssistantPage';
 import SoftwarePage from './pages/SoftwarePage';
@@ -28,11 +28,21 @@ function App() {
     });
     const navigate = useNavigate();
 
-    // При изменении пользователя обновляем localStorage
+    // Состояние темы
+    const [theme, setTheme] = useState('light');
+
+    // Функция для переключения темы при клике на логотип
+    const toggleTheme = () => {
+        const newTheme = theme === 'light' ? 'dark' : 'light';
+        setTheme(newTheme);
+    };
+
+    // При изменении пользователя или темы обновляем localStorage и класс body
     useEffect(() => {
         if (user) localStorage.setItem('user', JSON.stringify(user));
         else localStorage.removeItem('user');
-    }, [user]);
+        document.body.className = theme;
+    }, [user, theme]);
 
     // Функция выхода: сброс пользователя и переход на главную страницу
     const logout = () => {
@@ -45,19 +55,19 @@ function App() {
 
     return (
         <>
-            {/* Шапка с логотипом и навигационным меню */}
+            {/* Шапка с логотипом (кликабелен для смены темы) и навигационным меню */}
             <header>
                 <div className="container nav">
-                    <div className="logo">TeamForge</div>
+                    <div className="logo" onClick={toggleTheme} style={{ cursor: 'pointer' }} title="Нажмите, чтобы сменить тему">
+                        TeamForge
+                    </div>
                     <nav className="menu">
                         {user ? (
                             <>
-                                {/* Порядок кнопок согласно требованию:
-                                    Программное обеспечение → База знаний → ИИ Помощник → Календарь → Звонки → Чаты → Профиль */}
                                 <Link to="/software">Программное обеспечение</Link>
                                 <Link to="/knowledge">База знаний</Link>
                                 <Link to="/ai-assistant">ИИ Помощник</Link>
-                                <Link to="/calendar">Календарь</Link> {/* Новая кнопка */}
+                                <Link to="/calendar">Календарь</Link>
                                 <Link to="/calls">Звонки</Link>
                                 <Link to="/chats">Чаты</Link>
                                 <Link to="/profile">Профиль</Link>
@@ -84,7 +94,7 @@ function App() {
                     <Route path="/chats" element={<ChatsPage user={user} />} />
                     <Route path="/chat/:chatId" element={<ChatPage user={user} />} />
                     <Route path="/calls" element={<CallsPage user={user} />} />
-                    <Route path="/calendar" element={<CalendarPage />} />  {/* Маршрут для Календаря */}
+                    <Route path="/calendar" element={<CalendarPage />} />
                     <Route path="/knowledge" element={<KnowledgeBasePage />} />
                     <Route path="/ai-assistant" element={<AIAssistantPage />} />
                     <Route path="/software" element={<SoftwarePage isAdmin={isAdmin} />} />
