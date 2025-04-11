@@ -49,21 +49,29 @@
 .cta-button:hover {
     background-color: #0056b3;
     transform: scale(1.05);
-}
-.cta-button {
-    display: inline-block;
-    padding: 0.75rem 2rem;
-    background-color: #007bff;
-    color: #ffffff;
-    text-decoration: none;
-    border-radius: 4px;
-    font-size: 1.1rem;
-    font-weight: 500;
-    transition: background-color 0.3s ease, transform 0.2s ease;
+    color: #ffffff; /* Явное указание белого цвета */
 }
 
-.cta-button:hover {
+/* ================================================= */
+/*              Тёмная тема (Dark Theme)            */
+/* ================================================= */
+/* Активируется, если у <body> установлен класс "dark" */
+
+body.dark .main-page {
+    /* Затемняем фоновое изображение в тёмном режиме */
+    filter: brightness(0.75);
+}
+
+body.dark .overlay {
+    /* Повышаем непрозрачность затемнения для лучшей читаемости */
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+body.dark .cta-button {
+    /* Немного темнее кнопка для тёмного режима */
     background-color: #0056b3;
-    transform: scale(1.05);
-    color: #ffffff; /* Добавлено для явного указания белого цвета */
+}
+
+body.dark .cta-button:hover {
+    background-color: #004494;
 }
