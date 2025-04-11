@@ -76,3 +76,37 @@
     border-radius: 8px;
     display: block; /* чтобы скругление работало */
 }
+
+/* ================================================= */
+/*              Тёмная тема (Dark Theme)            */
+/* ================================================= */
+/* Активируется, если у <body> установлен класс "dark" */
+
+body.dark .knowledge-title {
+    color: #1e90ff;
+}
+
+body.dark .knowledge-item {
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+}
+
+body.dark .knowledge-item:hover {
+    box-shadow: 0 0 10px rgba(255,255,255,0.1);
+}
+
+body.dark .knowledge-item h3 {
+    color: #1e90ff;
+}
+
+body.dark .knowledge-item p {
+    color: #ccc;
+}
+
+body.dark .knowledge-item button {
+    /* Можно немного изменить оттенок для тёмного фона */
+    background-color: #e69500;
+}
+body.dark .knowledge-item button:hover {
+    background-color: #ff7f00;
+}
