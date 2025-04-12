@@ -1,35 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import Calendar from 'react-calendar';
-import 'react-calendar/dist/Calendar.css';  // ← Здесь ваши стили календаря
-import './CalendarPage.css';               // ← Подключаем наши новые стили для остальной части
+import 'react-calendar/dist/Calendar.css';
+import './CalendarPage.css';
 
-function CalendarPage() {
-    // Выбранная дата (по умолчанию сегодня)
+function CalendarPage({ user }) {
     const [selectedDate, setSelectedDate] = useState(new Date());
-    // Задачи для выбранной даты
     const [tasks, setTasks] = useState([]);
-    // Форма для добавления/редактирования задачи
     const [formData, setFormData] = useState({
         id: null,
         title: '',
         description: '',
-        due_date: new Date().toISOString().slice(0,10),
+        // При первом создании делаем строку локальной даты,
+        // чтобы тоже не было смещения
+        due_date: new Date().toLocaleDateString('en-CA'),
     });
-    // Задачи на ближайшую неделю
     const [upcomingTasks, setUpcomingTasks] = useState([]);
 
-    // Получаем задачи для выбранной даты (GET /tasks?date=YYYY-MM-DD)
+    // Получаем задачи для выбранной даты (локальной)
     const fetchTasksForDate = () => {
-        const dateStr = selectedDate.toISOString().slice(0,10);
-        fetch(`http://localhost:5000/tasks?date=${dateStr}`)
+        if (!user) return;
+        // Формируем YYYY-MM-DD в локальном времени
+        const dateStr = selectedDate.toLocaleDateString('en-CA');
+        fetch(`http://localhost:5000/tasks?user_id=${user.id}&date=${dateStr}`)
             .then((res) => res.json())
             .then((data) => setTasks(data))
             .catch((err) => console.error(err));
     };
 
-    // Получаем все задачи и фильтруем те, что на ближайшую неделю
+    // Получаем задачи на ближайшую неделю (без смещения)
     const fetchUpcomingTasks = () => {
-        fetch('http://localhost:5000/tasks')
+        if (!user) return;
+        fetch(`http://localhost:5000/tasks?user_id=${user.id}`)
             .then((res) => res.json())
             .then((data) => {
                 const today = new Date();
@@ -47,44 +48,48 @@ function CalendarPage() {
         fetchTasksForDate();
         fetchUpcomingTasks();
         // eslint-disable-next-line
-    }, [selectedDate]);
+    }, [selectedDate, user]);
 
-    // Добавление новой задачи или обновление существующей
     const handleAddOrUpdate = () => {
-        const dateStr = selectedDate.toISOString().slice(0,10);
+        if (!user) return;
+
+        // Получаем локальную дату, если пользователь не ввёл другую
+        const localDate = selectedDate.toLocaleDateString('en-CA');
+        const dueDateToSend = formData.due_date || localDate;
 
         if (formData.id) {
-            // Редактирование (PUT /tasks/<id>)
+            // Редактирование
             fetch(`http://localhost:5000/tasks/${formData.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     title: formData.title,
                     description: formData.description,
-                    due_date: formData.due_date || dateStr,
+                    due_date: dueDateToSend,
                 }),
             })
                 .then((res) => res.json())
                 .then(() => {
-                    setFormData({ id: null, title: '', description: '', due_date: dateStr });
+                    setFormData({ id: null, title: '', description: '', due_date: localDate });
                     fetchTasksForDate();
                     fetchUpcomingTasks();
                 })
                 .catch((err) => console.error(err));
         } else {
-            // Создание новой задачи (POST /tasks)
+            // Создание
             fetch('http://localhost:5000/tasks', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    user_id: user.id,
                     title: formData.title,
                     description: formData.description,
-                    due_date: formData.due_date || dateStr,
+                    due_date: dueDateToSend,
                 }),
             })
                 .then((res) => res.json())
                 .then(() => {
-                    setFormData({ id: null, title: '', description: '', due_date: dateStr });
+                    setFormData({ id: null, title: '', description: '', due_date: localDate });
                     fetchTasksForDate();
                     fetchUpcomingTasks();
                 })
@@ -106,21 +111,28 @@ function CalendarPage() {
             .catch((err) => console.error(err));
     };
 
+    // Если пользователь не залогинен, показываем заглушку
+    if (!user) {
+        return <div>Пожалуйста, войдите, чтобы увидеть календарь!</div>;
+    }
+
     return (
         <div className="calendar-page container">
-            {/* Заголовок страницы */}
             <h2 className="calendar-title">Календарь задач</h2>
 
-            {/* Сам календарь. Стили .my-react-calendar НЕ меняем */}
             <Calendar
                 className="my-react-calendar"
                 onChange={setSelectedDate}
                 value={selectedDate}
+                locale="ru-RU"
+                // Если ваша версия react-calendar поддерживает, оставьте:
+                //calendarType="ISO_8601"
+                // Если нет, уберите calendarType совсем,
+                // чтобы не вызывать "Unsupported calendar type"
             />
 
-            {/* Блок задач на выбранную дату */}
             <h3 className="tasks-subtitle">
-                Задачи на <span>{selectedDate.toISOString().slice(0, 10)}</span>
+                Задачи на <span>{selectedDate.toLocaleDateString('en-CA')}</span>
             </h3>
             {tasks.length === 0 ? (
                 <p className="tasks-none">Нет задач на выбранную дату.</p>
@@ -141,7 +153,6 @@ function CalendarPage() {
                 </ul>
             )}
 
-            {/* Блок добавления / редактирования задачи */}
             <h3 className="tasks-subtitle">
                 {formData.id ? 'Редактировать задачу' : 'Добавить задачу'}
             </h3>
@@ -164,7 +175,7 @@ function CalendarPage() {
                 <label className="date-label">Дата выполнения: </label>
                 <input
                     type="date"
-                    value={formData.due_date || selectedDate.toISOString().slice(0,10)}
+                    value={formData.due_date}
                     onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
                 />
                 <br />
@@ -174,7 +185,6 @@ function CalendarPage() {
                 </button>
             </div>
 
-            {/* Блок задач на ближайшую неделю */}
             <h3 className="tasks-subtitle">Задачи на ближайшую неделю</h3>
             {upcomingTasks.length === 0 ? (
                 <p className="tasks-none">Нет задач на ближайшую неделю.</p>

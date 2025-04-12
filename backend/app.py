@@ -1,36 +1,28 @@
-import eventlet                     # Импорт eventlet для поддержки асинхронных операций
-eventlet.monkey_patch()             # Применение monkey patch для работы с асинхронностью
+# ------------------- BACKEND (app.py) -------------------
+import eventlet
+eventlet.monkey_patch()
 
 from flask import Flask, request, jsonify, send_from_directory
-# Импорт основных функций Flask
-
-from flask_sqlalchemy import SQLAlchemy   # Для работы с базой данных через ORM
+from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO, emit, join_room, leave_room
-# Для работы с WebSocket (сокетами)
-from flask_cors import CORS                # Для поддержки запросов из других доменов
+from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
-# Для безопасного хранения паролей
 
-import os                                  # Для работы с файловой системой (например, создание директорий)
-from datetime import datetime, date          # Для работы с датами и временем
-
-# Для отправки email и сброса пароля:
+import os
+from datetime import datetime, date
 from flask_mail import Mail, Message as MailMessage
-# Импортируем Mail и переименовываем Message в MailMessage, чтобы не конфликтовать с нашей моделью Message
 from itsdangerous import URLSafeTimedSerializer
-# Для генерации безопасных токенов с ограниченным временем жизни
 
-# Инициализация приложения Flask
 app = Flask(__name__)
-CORS(app)  # Разрешаем кросс-доменные запросы
+CORS(app)
 
-# Конфигурация приложения
+# ------------------- CONFIG -------------------
 app.config['SECRET_KEY'] = 'secret!'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///teamforge.db'
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)  # Создаем папку для загрузки файлов, если её нет
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Настройки для Flask-Mail
+# Настройки Flask-Mail
 app.config['MAIL_SERVER'] = 'smtp.mail.ru'
 app.config['MAIL_PORT'] = 465
 app.config['MAIL_USE_SSL'] = True
@@ -39,89 +31,76 @@ app.config['MAIL_USERNAME'] = 'valerich.tv.88@mail.ru'
 app.config['MAIL_PASSWORD'] = 'nM2bxy56cby8TwA4cx3E'
 app.config['MAIL_DEFAULT_SENDER'] = 'valerich.tv.88@mail.ru'
 
-# Инициализируем расширения: ORM, сокеты и почту
 db = SQLAlchemy(app)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
 mail = Mail(app)
 
-# Создание сериализатора для токенов сброса пароля (использует SECRET_KEY)
 ts = URLSafeTimedSerializer(app.config["SECRET_KEY"])
 
 # ------------------- MODELS -------------------
-# Модель пользователя
 class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)  # Первичный ключ
-    username = db.Column(db.String(80), unique=True, nullable=False)  # Уникальное имя пользователя
-    password_hash = db.Column(db.String(128), nullable=False)           # Хэш пароля
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)  # Новый уникальный email
+    password_hash = db.Column(db.String(128), nullable=False)
 
-# Модель чата
 class Chat(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), nullable=False)
-    is_group = db.Column(db.Boolean, default=False)  # Флаг, указывающий, является ли чат групповым
+    is_group = db.Column(db.Boolean, default=False)
 
-# Модель связи пользователя и чата
 class ChatUser(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     chat_id = db.Column(db.Integer, db.ForeignKey('chat.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     notifications_enabled = db.Column(db.Boolean, default=True)
 
-# Модель сообщения (для общения в чатах)
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     chat_id = db.Column(db.Integer, db.ForeignKey('chat.id'), nullable=False)
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    content = db.Column(db.Text)  # Текстовое содержание сообщения
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)  # Время отправки
-    media_filename = db.Column(db.String(120), nullable=True)  # Имя файла для медиа (если прикреплено)
+    content = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    media_filename = db.Column(db.String(120), nullable=True)
     deleted_for_all = db.Column(db.Boolean, default=False)
-    reply_to_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)  # Сообщение, на которое отвечаем
-    forwarded_from_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Если сообщение переслано
+    reply_to_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)
+    forwarded_from_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
-# Модель реакции (например, лайки, эмоции) на сообщения
 class Reaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     reaction = db.Column(db.String(20), nullable=False)
 
-# Модель для хранения информации об удалённых у пользователя сообщениях
 class DeletedMessage(db.Model):
-    """
-    Хранит информацию о том, какие сообщения пользователь удалил "у себя".
-    """
     id = db.Column(db.Integer, primary_key=True)
     message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-# Модель дружбы
 class Friendship(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     requester_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    status = db.Column(db.String(20), default='pending')  # Статусы: pending, accepted
+    status = db.Column(db.String(20), default='pending')  # 'pending', 'accepted'
 
-# Модель истории звонков
 class CallHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     caller_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    call_type = db.Column(db.String(20), nullable=False)  # Личный или групповой звонок
-    # Участников сохраняем как строку с запятыми, например: ",2,3,"
-    participants = db.Column(db.String(200))
+    call_type = db.Column(db.String(20), nullable=False)
+    participants = db.Column(db.String(200))  # строка вида ",2,3,"
     start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=False)
-    duration = db.Column(db.Integer, nullable=False)  # Длительность звонка в секундах
+    duration = db.Column(db.Integer, nullable=False)
 
-# Модель задач (для календаря и планирования)
+# Добавили user_id, чтобы у каждого пользователя были свои задачи
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Владелец задачи
     title = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text, nullable=True)
-    due_date = db.Column(db.Date, nullable=False)  # Дата выполнения задачи
+    due_date = db.Column(db.Date, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-# Модель программного обеспечения (ПО)
 class Software(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(120), nullable=False)
@@ -129,29 +108,34 @@ class Software(db.Model):
     image_url = db.Column(db.String(255), nullable=True)
     github_url = db.Column(db.String(255), nullable=True)
 
-# ------------------- ФУНКЦИИ ДЛЯ СБРОСА ПАРОЛЯ -------------------
+# ------------------- HELPERS -------------------
 def generate_confirmation_token(email):
-    """Генерирует токен для сброса пароля на основе email."""
     return ts.dumps(email, salt='password-reset-salt')
 
 def confirm_token(token, expiration=3600):
-    """Подтверждает токен и возвращает email, если токен действителен (по умолчанию 3600 секунд)."""
     try:
         email = ts.loads(token, salt="password-reset-salt", max_age=expiration)
-    except Exception as e:
+    except Exception:
         return None
     return email
 
 # ------------------- AUTH ROUTES -------------------
 @app.route('/register', methods=['POST'])
 def register():
-    data = request.json  # Получаем данные из запроса
-    # Проверяем, существует ли уже пользователь с таким именем
+    data = request.json
+    if not data.get('username') or not data.get('email') or not data.get('password'):
+        return jsonify({'status': 'fail', 'message': 'Необходимо указать username, email и password'}), 400
+
+    # Проверка username
     if User.query.filter_by(username=data['username']).first():
         return jsonify({'status': 'fail', 'message': 'Имя пользователя уже занято'}), 400
-    # Создаем пользователя с хэшированным паролем
+    # Проверка email
+    if User.query.filter_by(email=data['email']).first():
+        return jsonify({'status': 'fail', 'message': 'Эта почта уже используется'}), 400
+
     user = User(
         username=data['username'],
+        email=data['email'],
         password_hash=generate_password_hash(data['password'])
     )
     db.session.add(user)
@@ -160,9 +144,8 @@ def register():
 
 @app.route('/login', methods=['POST'])
 def login():
-    data = request.json  # Получаем данные из запроса
-    user = User.query.filter_by(username=data['username']).first()  # Находим пользователя по имени
-    # Проверяем, совпадает ли пароль
+    data = request.json
+    user = User.query.filter_by(username=data['username']).first()
     if user and check_password_hash(user.password_hash, data['password']):
         return jsonify({'status': 'success', 'user_id': user.id})
     return jsonify({'status': 'fail', 'message': 'Неверные логин или пароль'}), 401
@@ -170,19 +153,15 @@ def login():
 # ------------------- RESET PASSWORD ROUTES -------------------
 @app.route('/reset-password', methods=['POST'])
 def reset_password():
-    # Получаем данные запроса в формате JSON
     data = request.get_json()
     email = data.get('email')
     if not email:
-        print("Email не предоставлен для сброса пароля")
         return jsonify({'message': 'Email обязателен'}), 400
 
-    # Здесь предполагаем, что username используется как email или добавьте поле email в модель User
-    user = User.query.filter_by(username=email).first()
+    user = User.query.filter_by(email=email).first()  # Ищем по email
     if user:
         token = generate_confirmation_token(email)
         reset_url = f'http://localhost:3000/reset-password-confirm/{token}'
-        # Формируем письмо для сброса пароля
         msg = MailMessage(
             subject='Сброс пароля',
             sender=app.config['MAIL_DEFAULT_SENDER'],
@@ -191,11 +170,11 @@ def reset_password():
         msg.body = f'Для сброса пароля перейдите по ссылке: {reset_url}'
         try:
             mail.send(msg)
-            print(f"Письмо для сброса пароля отправлено на {email}")
         except Exception as e:
             print(f"Ошибка отправки письма: {e}")
             return jsonify({'message': 'Ошибка отправки письма'}), 500
-    # Возвращаем успешный ответ, чтобы не раскрывать информацию о существовании email
+
+    # Ответ "всегда ок", чтобы не светить, есть такой email или нет
     return jsonify({'message': 'Инструкции по сбросу пароля отправлены на вашу почту'}), 200
 
 @app.route('/reset-password-confirm/<token>', methods=['POST'])
@@ -204,31 +183,28 @@ def reset_password_confirm(token):
     password = data.get('password')
     password_confirm = data.get('password_confirm')
     if not password or not password_confirm:
-        print("Пароль или подтверждение не предоставлены")
         return jsonify({'message': 'Пароль и подтверждение обязательны'}), 400
     if password != password_confirm:
-        print("Пароли не совпадают")
         return jsonify({'message': 'Пароли не совпадают'}), 400
+
     email = confirm_token(token)
     if not email:
-        print("Неверный или устаревший токен")
         return jsonify({'message': 'Ссылка для сброса пароля недействительна или истекла'}), 400
-    user = User.query.filter_by(username=email).first()  # Если email хранится как username
+
+    user = User.query.filter_by(email=email).first()
     if not user:
-        print("Пользователь не найден")
         return jsonify({'message': 'Пользователь не найден'}), 404
 
-    # Обновляем пароль пользователя
     user.password_hash = generate_password_hash(password)
     db.session.commit()
-    print(f"Пароль для пользователя {user.username} сброшен")
     return jsonify({'message': 'Пароль успешно сброшен'}), 200
 
 # ------------------- USER ROUTES -------------------
 @app.route('/users', methods=['GET'])
 def get_users():
+    # При желании оставляем доступный список всех пользователей (используется для поиска)
     users = User.query.all()
-    result = [{'id': u.id, 'username': u.username} for u in users]
+    result = [{'id': u.id, 'username': u.username, 'email': u.email} for u in users]
     return jsonify(result)
 
 @app.route('/profile_data/<int:user_id>', methods=['GET'])
@@ -253,12 +229,14 @@ def send_friend_request():
         return jsonify({'status': 'fail', 'message': 'Не указан один из ID'}), 400
     if requester_id == receiver_id:
         return jsonify({'status': 'fail', 'message': 'Нельзя добавить себя в друзья'}), 400
+
     existing = Friendship.query.filter(
         ((Friendship.requester_id == requester_id) & (Friendship.receiver_id == receiver_id)) |
         ((Friendship.requester_id == receiver_id) & (Friendship.receiver_id == requester_id))
     ).first()
     if existing:
         return jsonify({'status': 'fail', 'message': 'Запрос уже отправлен или вы уже друзья'}), 400
+
     fr = Friendship(requester_id=requester_id, receiver_id=receiver_id, status='pending')
     db.session.add(fr)
     db.session.commit()
@@ -267,7 +245,8 @@ def send_friend_request():
 @app.route('/friend_requests/<int:user_id>', methods=['GET'])
 def get_friend_requests(user_id):
     requests = Friendship.query.filter_by(receiver_id=user_id, status='pending').all()
-    result = [{'id': fr.id, 'requester_id': fr.requester_id, 'receiver_id': fr.receiver_id, 'status': fr.status} for fr in requests]
+    result = [{'id': fr.id, 'requester_id': fr.requester_id, 'receiver_id': fr.receiver_id, 'status': fr.status}
+              for fr in requests]
     return jsonify(result)
 
 @app.route('/friend_request/confirm', methods=['POST'])
@@ -307,7 +286,7 @@ def get_friends(user_id):
         friend_id = fr.receiver_id if fr.requester_id == user_id else fr.requester_id
         friend = User.query.get(friend_id)
         if friend:
-            friends.append({'id': friend.id, 'username': friend.username})
+            friends.append({'id': friend.id, 'username': friend.username, 'email': friend.email})
     return jsonify(friends)
 
 @app.route('/friendship', methods=['DELETE'])
@@ -333,7 +312,7 @@ def search_users():
         users = User.query.filter(User.username.contains(query)).all()
     else:
         users = []
-    result = [{'id': u.id, 'username': u.username} for u in users]
+    result = [{'id': u.id, 'username': u.username, 'email': u.email} for u in users]
     return jsonify(result)
 
 # ------------------- CHAT ROUTES -------------------
@@ -345,6 +324,7 @@ def create_chat():
     chat = Chat(name=data['name'], is_group=True)
     db.session.add(chat)
     db.session.commit()
+
     if data.get('creator_id') not in data['user_ids']:
         data['user_ids'].append(data.get('creator_id'))
     for user_id in data['user_ids']:
@@ -370,7 +350,7 @@ def get_messages(chat_id):
     query = Message.query.filter(Message.chat_id == chat_id, Message.deleted_for_all == False)
     if keyword:
         query = query.filter(Message.content.contains(keyword))
-    if (user_id):
+    if user_id:
         deleted_ids = DeletedMessage.query.filter_by(user_id=user_id).all()
         deleted_ids_list = [dm.message_id for dm in deleted_ids]
         if deleted_ids_list:
@@ -414,6 +394,7 @@ def delete_message(message_id):
     message = Message.query.get(message_id)
     if not message:
         return jsonify({'status': 'fail', 'message': 'Сообщение не найдено'}), 404
+
     if mode == 'everyone':
         message.deleted_for_all = True
         db.session.commit()
@@ -473,6 +454,7 @@ def add_call_history():
         duration = int((end_time - start_time).total_seconds())
     except Exception as e:
         return jsonify({'status': 'fail', 'message': f'Ошибка обработки данных: {str(e)}'}), 400
+
     record = CallHistory(
         caller_id=caller_id,
         call_type=call_type,
@@ -520,15 +502,24 @@ def get_call_history(user_id):
 # ------------------- TASK (Календарь/Задачи) ROUTES -------------------
 @app.route('/tasks', methods=['GET'])
 def get_tasks():
+    """
+    Для выборки нужно передавать в запросе &user_id=... (обязательный)
+    и &date=YYYY-MM-DD (необязательный)
+    """
+    user_id = request.args.get('user_id', type=int)
+    if not user_id:
+        return jsonify({'status': 'fail', 'message': 'Не указан user_id'}), 400
+
     date_filter = request.args.get('date')  # формат YYYY-MM-DD
     if date_filter:
         try:
             due_date = datetime.strptime(date_filter, "%Y-%m-%d").date()
-        except Exception as e:
+        except:
             return jsonify({'status': 'fail', 'message': 'Неверный формат даты'}), 400
-        tasks = Task.query.filter_by(due_date=due_date).all()
+        tasks = Task.query.filter_by(user_id=user_id, due_date=due_date).all()
     else:
-        tasks = Task.query.all()
+        tasks = Task.query.filter_by(user_id=user_id).all()
+
     result = []
     for task in tasks:
         result.append({
@@ -544,14 +535,23 @@ def get_tasks():
 def create_task():
     data = request.json
     title = data.get('title')
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({'status': 'fail', 'message': 'Не указан user_id'}), 400
+    if not title:
+        return jsonify({'status': 'fail', 'message': 'Название обязательно'}), 400
+
     due_date_str = data.get('due_date')
-    if not title or not due_date_str:
-        return jsonify({'status': 'fail', 'message': 'Название и дата обязательны'}), 400
+    if not due_date_str:
+        return jsonify({'status': 'fail', 'message': 'Дата обязательна'}), 400
+
     try:
         due_date = datetime.strptime(due_date_str, "%Y-%m-%d").date()
-    except Exception as e:
+    except:
         return jsonify({'status': 'fail', 'message': 'Неверный формат даты'}), 400
+
     task = Task(
+        user_id=user_id,
         title=title,
         description=data.get('description', ''),
         due_date=due_date
@@ -565,6 +565,8 @@ def update_task(task_id):
     task = Task.query.get(task_id)
     if not task:
         return jsonify({'status': 'fail', 'message': 'Задача не найдена'}), 404
+
+    # Дополнительно можно проверить, что user_id == автор, если требуется строгое разграничение
     data = request.json
     task.title = data.get('title', task.title)
     task.description = data.get('description', task.description)
@@ -572,7 +574,7 @@ def update_task(task_id):
     if due_date_str:
         try:
             task.due_date = datetime.strptime(due_date_str, "%Y-%m-%d").date()
-        except Exception as e:
+        except:
             return jsonify({'status': 'fail', 'message': 'Неверный формат даты'}), 400
     db.session.commit()
     return jsonify({'status': 'success', 'message': 'Задача обновлена'})
@@ -582,6 +584,7 @@ def delete_task(task_id):
     task = Task.query.get(task_id)
     if not task:
         return jsonify({'status': 'fail', 'message': 'Задача не найдена'}), 404
+
     db.session.delete(task)
     db.session.commit()
     return jsonify({'status': 'success', 'message': 'Задача удалена'})
@@ -604,7 +607,6 @@ def get_software():
 @app.route('/software', methods=['POST'])
 def create_software():
     data = request.json
-    # Проверка прав: админ должен передавать admin=true в запросе
     if not data.get('admin', False):
         return jsonify({'status': 'fail', 'message': 'Нет прав доступа'}), 403
     title = data.get('title')
@@ -720,7 +722,7 @@ def handle_update_notification(data):
             'notifications_enabled': data['notifications_enabled']
         }, room=str(data['chat_id']))
 
-# ------------- WEBRTC / CALL SIGNALING EVENTS -------------
+# ------------- WEBRTC / CALL SIGNALING -------------
 @socketio.on('register_user')
 def handle_register_user(data):
     user_id = data.get('user_id')
@@ -756,9 +758,9 @@ def handle_end_call(data):
     targets = data.get('targets', [])
     for target in targets:
         socketio.emit('end_call', data, room=str(target))
-# ------------- END OF SIGNALING EVENTS -------------
+# ------------- END OF SIGNALING -------------
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()   # Создаем все таблицы, если их еще нет
-    socketio.run(app, debug=True)  # Запускаем сервер с поддержкой сокетов
+        db.create_all()
+    socketio.run(app, debug=True)
