@@ -1,7 +1,6 @@
-// ChatsPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './ChatsPage.css'; // <-- Подключаем наш файл стилей
+import './ChatsPage.css';
 
 function sanitizeInput(value) {
     const forbiddenSQLPatterns = /drop\s+table|delete\s+from|truncate\s+table|update\s+.*\s+set|insert\s+into|select\s+.*\s+from/gi;
@@ -13,7 +12,7 @@ function sanitizeInput(value) {
 
 function ChatsPage({ user }) {
     const [chats, setChats] = useState([]);
-    const [allUsers, setAllUsers] = useState([]);
+    const [allFriends, setAllFriends] = useState([]); // список друзей
     const [selected, setSelected] = useState([]);
     const [chatName, setChatName] = useState('');
     const navigate = useNavigate();
@@ -25,7 +24,6 @@ function ChatsPage({ user }) {
         }
         let isMounted = true;
 
-        // Получаем список чатов
         fetch(`http://localhost:5000/user_chats/${user.id}`)
             .then(res => res.json())
             .then(data => {
@@ -35,13 +33,12 @@ function ChatsPage({ user }) {
             })
             .catch(err => console.error(err));
 
-        // Список всех пользователей (исключая себя)
-        fetch('http://localhost:5000/users')
+        // Заменяем /users на /friends/<user.id>
+        fetch(`http://localhost:5000/friends/${user.id}`)
             .then(res => res.json())
             .then(data => {
                 if (isMounted) {
-                    const filtered = data.filter(u => u.id !== user.id);
-                    setAllUsers(filtered);
+                    setAllFriends(data);
                 }
             })
             .catch(err => console.error(err));
@@ -121,9 +118,9 @@ function ChatsPage({ user }) {
                 />
             </div>
 
-            <h4>Выберите участников:</h4>
+            <h4>Выберите участников (ваших друзей):</h4>
             <div className="select-users">
-                {allUsers.map(u => (
+                {allFriends.map(u => (
                     <label key={u.id} className="user-checkbox">
                         <input
                             type="checkbox"
