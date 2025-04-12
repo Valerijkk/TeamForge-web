@@ -55,7 +55,7 @@ def main():
     # Получаем app
     app = create_app()
     # Запускаем с socketio
-    socketio.run(app, debug=True)
+    socketio.run(app, debug=True, host='0.0.0.0', port=5000)
 
 # Запускаем, если скрипт напрямую
 if __name__ == '__main__':

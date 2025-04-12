@@ -1,7 +1,6 @@
-// ProfilePage.jsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './ProfilePage.css'; // <-- Подключаем наш файл со стилями
+import './ProfilePage.css';
 
 function ProfilePage({ user, onLogout }) {
     const navigate = useNavigate();
@@ -84,7 +83,9 @@ function ProfilePage({ user, onLogout }) {
             fetch(`http://localhost:5000/search_users?q=${searchQuery}`)
                 .then(res => res.json())
                 .then(data => {
-                    const filtered = data.filter(u => u.id !== user.id && !friends.some(f => f.id === u.id));
+                    const filtered = data.filter(
+                        u => u.id !== user.id && !friends.some(f => f.id === u.id)
+                    );
                     if (mountedRef.current) {
                         setSearchResults(filtered);
                     }
@@ -150,6 +151,10 @@ function ProfilePage({ user, onLogout }) {
             .catch(error => console.error('Ошибка при удалении друга:', error));
     };
 
+    if (!user) {
+        return <div>Пожалуйста, войдите!</div>;
+    }
+
     return (
         <div className="profile-page container">
             <h2 className="profile-title">Профиль пользователя</h2>
@@ -191,7 +196,7 @@ function ProfilePage({ user, onLogout }) {
                     <ul className="friends-list">
                         {friends.map(f => (
                             <li key={f.id}>
-                                {f.username}
+                                {f.username}{' '}
                                 <button onClick={() => removeFriend(f.id)}>Удалить</button>
                             </li>
                         ))}
@@ -235,8 +240,8 @@ function ProfilePage({ user, onLogout }) {
                     <ul className="search-results">
                         {searchResults.map(u => (
                             <li key={u.id}>
-                                {u.username}
-                                <button onClick={() => addFriend(u.id)}>Добавить в друзья</button>
+                                {u.username}{' '}
+                                <button onClick={() => addFriend(u.id)}>Добавить</button>
                             </li>
                         ))}
                     </ul>
