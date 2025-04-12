@@ -1,5 +1,8 @@
+// App.js
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
+// Импортируем React-Redux хуки
+import { useSelector, useDispatch } from 'react-redux';
 
 // Импорт основных страниц проекта
 import MainPage from './pages/MainPage';
@@ -21,41 +24,52 @@ import ResetPasswordConfirmPage from './pages/ResetPasswordConfirmPage';
 import './App.css';
 
 function App() {
-    // Получаем пользователя из localStorage, если ранее был залогинен
+    const navigate = useNavigate();
+
+    // Берём тему из Redux
+    const theme = useSelector((state) => state.theme);
+    // Чтобы менять тему, нужен dispatch
+    const dispatch = useDispatch();
+
+    // Локальное состояние для пользователя
     const [user, setUser] = useState(() => {
         const saved = localStorage.getItem('user');
         return saved ? JSON.parse(saved) : null;
     });
-    const navigate = useNavigate();
 
-    // Состояние темы
-    const [theme, setTheme] = useState('light');
+    // Когда user меняется, обновляем localStorage (чтобы не потерять user при обновлении страницы)
+    useEffect(() => {
+        if (user) {
+            localStorage.setItem('user', JSON.stringify(user));
+        } else {
+            localStorage.removeItem('user');
+        }
+    }, [user]);
 
-    // Функция для переключения темы при клике на логотип
+    // Когда theme меняется, прописываем её в body.className и сохраняем в localStorage
+    useEffect(() => {
+        document.body.className = theme;
+        localStorage.setItem('appTheme', theme);
+    }, [theme]);
+
+    // Функция переключения темы: отправляем экшен в Redux
     const toggleTheme = () => {
         const newTheme = theme === 'light' ? 'dark' : 'light';
-        setTheme(newTheme);
+        dispatch({ type: 'SET_THEME', payload: newTheme });
     };
 
-    // При изменении пользователя или темы обновляем localStorage и класс body
-    useEffect(() => {
-        if (user) localStorage.setItem('user', JSON.stringify(user));
-        else localStorage.removeItem('user');
-        document.body.className = theme;
-    }, [user, theme]);
-
-    // Функция выхода: сброс пользователя и переход на главную страницу
+    // Функция выхода
     const logout = () => {
         setUser(null);
         navigate('/');
     };
 
-    // Пример проверки: считаем, что админом является пользователь с именем "admin"
+    // Для примера условная проверка "админ" (можно оставить как было)
     const isAdmin = user && user.username === 'admin';
 
     return (
         <>
-            {/* Шапка с логотипом (кликабелен для смены темы) и навигационным меню */}
+            {/* Шапка с логотипом (при клике - toggleTheme) и навигация */}
             <header>
                 <div className="container nav">
                     <div
@@ -87,7 +101,7 @@ function App() {
                 </div>
             </header>
 
-            {/* Основной контент с маршрутизацией */}
+            {/* Основной контент + роутинг */}
             <div className="container">
                 <Routes>
                     <Route path="/" element={<MainPage />} />
@@ -99,10 +113,7 @@ function App() {
                     <Route path="/chats" element={<ChatsPage user={user} />} />
                     <Route path="/chat/:chatId" element={<ChatPage user={user} />} />
                     <Route path="/calls" element={<CallsPage user={user} />} />
-
-                    {/* ВОТ ЗДЕСЬ ГЛАВНОЕ ИЗМЕНЕНИЕ: */}
                     <Route path="/calendar" element={<CalendarPage user={user} />} />
-
                     <Route path="/knowledge" element={<KnowledgeBasePage />} />
                     <Route path="/ai-assistant" element={<AIAssistantPage />} />
                     <Route path="/software" element={<SoftwarePage isAdmin={isAdmin} />} />
