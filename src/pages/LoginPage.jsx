@@ -1,4 +1,3 @@
-// LoginPage.jsx
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
@@ -9,7 +8,6 @@ function LoginPage({ setUser }) {
 
     const login = async () => {
         if (!username.trim() || !password.trim()) {
-            // Можно использовать красивое уведомление вместо alert, например, toast
             console.error('Введите логин и пароль');
             return;
         }
@@ -57,7 +55,6 @@ function LoginPage({ setUser }) {
                 />
             </div>
             <button onClick={login}>Войти</button>
-            {/* Кнопка для перехода на страницу сброса пароля */}
             <p>
                 Забыли пароль? <Link to="/reset-password">Сбросить пароль</Link>
             </p>
