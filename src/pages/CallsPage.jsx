@@ -1,15 +1,14 @@
-// CallsPage.jsx
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
-import './CallsPage.css'; // Подключение файла стилей для звонков
+import './CallsPage.css';
 
 const socket = io('http://localhost:5000');
 
 function CallsPage({ user }) {
     const navigate = useNavigate();
     const [callType, setCallType] = useState("personal");
-    const [allUsers, setAllUsers] = useState([]);
+    const [allUsers, setAllUsers] = useState([]); // Это будет список друзей
     const [selectedUser, setSelectedUser] = useState("");
     const [selectedUsers, setSelectedUsers] = useState([]);
     const [callActive, setCallActive] = useState(false);
@@ -17,26 +16,18 @@ function CallsPage({ user }) {
     const [incomingCall, setIncomingCall] = useState(null);
     const [callParticipants, setCallParticipants] = useState([]);
 
-    // Состояния для переключения вебкамеры и демонстрации экрана
     const [isWebcamOn, setIsWebcamOn] = useState(false);
     const [isScreenSharingOn, setIsScreenSharingOn] = useState(false);
 
-    // Создаем стабильный объект ограничений для аудио (без видео)
     const audioConstraints = useMemo(() => ({ audio: true, video: false }), []);
 
-    // Ссылки на локальный поток и отдельные треки
     const localStreamRef = useRef(null);
     const webcamTrackRef = useRef(null);
     const screenTrackRef = useRef(null);
-
-    // Храним remote поток для каждого peerId (один поток на соединение)
     const [remoteStreams, setRemoteStreams] = useState({});
-
-    // Объект для хранения RTCPeerConnection
     const peerConnections = useRef({});
-
-    // Глобальный ref для отслеживания монтирования компонента
     const mountedRef = useRef(true);
+
     useEffect(() => {
         mountedRef.current = true;
         return () => {
@@ -76,7 +67,7 @@ function CallsPage({ user }) {
                     localStreamRef.current = stream;
                 }
             } catch (err) {
-                console.error("Ошибка получения аудио для входящего звонка:", err);
+                console.error("Ошибка получения аудио:", err);
                 return;
             }
         }
@@ -92,7 +83,6 @@ function CallsPage({ user }) {
         }
     }, [audioConstraints, createPeerConnection]);
 
-    // Функция renegotiation для обновления SDP
     const renegotiate = useCallback(async (pc, peerId) => {
         try {
             const offer = await pc.createOffer();
@@ -108,19 +98,20 @@ function CallsPage({ user }) {
             navigate('/');
             return;
         }
-        socket.emit('register_user', { user_id: user.id });
-        fetch("http://localhost:5000/users")
+
+        // Вместо /users берём /friends/<user.id>
+        fetch(`http://localhost:5000/friends/${user.id}`)
             .then(res => res.json())
             .then(data => {
                 if (mountedRef.current) {
-                    const others = data.filter(u => u.id !== user.id);
-                    setAllUsers(others);
+                    setAllUsers(data); // это друзья
                 }
             })
-            .catch(err => console.error("Ошибка загрузки пользователей:", err));
+            .catch(err => console.error("Ошибка загрузки друзей:", err));
+
+        socket.emit('register_user', { user_id: user.id });
 
         socket.on('incoming_call', async (data) => {
-            console.log("Входящий звонок от", data.from);
             if (mountedRef.current) {
                 setIncomingCall(data);
             }
@@ -128,7 +119,6 @@ function CallsPage({ user }) {
 
         socket.on('webrtc_offer', async (data) => {
             const { from, sdp } = data;
-            console.log("Получен offer от", from);
             const pc = createPeerConnection(from);
             await pc.setRemoteDescription(new RTCSessionDescription(sdp));
             const answer = await pc.createAnswer();
@@ -138,7 +128,6 @@ function CallsPage({ user }) {
 
         socket.on('webrtc_answer', async (data) => {
             const { from, sdp } = data;
-            console.log("Получен answer от", from);
             const pc = peerConnections.current[from];
             if (pc) {
                 await pc.setRemoteDescription(new RTCSessionDescription(sdp));
@@ -152,13 +141,12 @@ function CallsPage({ user }) {
                 try {
                     await pc.addIceCandidate(new RTCIceCandidate(candidate));
                 } catch (e) {
-                    console.error("Ошибка добавления ICE кандидата", e);
+                    console.error("Ошибка addIceCandidate:", e);
                 }
             }
         });
 
         socket.on('end_call', (data) => {
-            console.log("Получено событие завершения звонка", data);
             endCallLocal();
         });
 
@@ -169,7 +157,7 @@ function CallsPage({ user }) {
             socket.off('webrtc_candidate');
             socket.off('end_call');
         };
-    }, [user, navigate, createPeerConnection, joinCall]);
+    }, [user, navigate, createPeerConnection]);
 
     const acceptIncomingCall = async () => {
         if (incomingCall) {
@@ -188,26 +176,28 @@ function CallsPage({ user }) {
             localStreamRef.current = stream;
             setCallActive(true);
             setCallStartTime(new Date());
+
             let targets = [];
             if (callType === "personal" && selectedUser) {
                 targets.push(selectedUser);
             } else if (callType === "group" && selectedUsers.length > 0) {
                 targets = selectedUsers;
             }
+
             setCallParticipants(targets);
             socket.emit('initiate_call', { from: user.id, callType, targets });
-            targets.forEach(async (targetId) => {
+
+            for (const targetId of targets) {
                 const pc = createPeerConnection(targetId);
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
                 socket.emit('webrtc_offer', { to: targetId, from: user.id, sdp: pc.localDescription });
-            });
+            }
         } catch (err) {
             console.error("Ошибка получения аудио:", err);
         }
     };
 
-    // Переключение вебкамеры: включает или выключает соответствующий трек
     const toggleWebcam = async () => {
         if (!localStreamRef.current) return;
         if (!isWebcamOn) {
@@ -216,7 +206,7 @@ function CallsPage({ user }) {
                 webcamTrackRef.current = videoStream.getVideoTracks()[0];
                 localStreamRef.current.addTrack(webcamTrackRef.current);
                 setIsWebcamOn(true);
-                Object.entries(peerConnections.current).forEach(async ([peerId, pc]) => {
+                for (const [peerId, pc] of Object.entries(peerConnections.current)) {
                     const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
                     if (sender) {
                         await sender.replaceTrack(webcamTrackRef.current);
@@ -224,7 +214,7 @@ function CallsPage({ user }) {
                         pc.addTrack(webcamTrackRef.current, localStreamRef.current);
                     }
                     await renegotiate(pc, peerId);
-                });
+                }
             } catch (err) {
                 console.error("Ошибка включения вебкамеры:", err);
             }
@@ -235,13 +225,12 @@ function CallsPage({ user }) {
                 webcamTrackRef.current = null;
             }
             setIsWebcamOn(false);
-            Object.entries(peerConnections.current).forEach(async ([peerId, pc]) => {
+            for (const [peerId, pc] of Object.entries(peerConnections.current)) {
                 await renegotiate(pc, peerId);
-            });
+            }
         }
     };
 
-    // Переключение демонстрации экрана
     const toggleScreenShare = async () => {
         if (!localStreamRef.current) return;
         if (!isScreenSharingOn) {
@@ -250,7 +239,7 @@ function CallsPage({ user }) {
                 screenTrackRef.current = screenStream.getVideoTracks()[0];
                 localStreamRef.current.addTrack(screenTrackRef.current);
                 setIsScreenSharingOn(true);
-                Object.entries(peerConnections.current).forEach(async ([peerId, pc]) => {
+                for (const [peerId, pc] of Object.entries(peerConnections.current)) {
                     const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
                     if (sender) {
                         await sender.replaceTrack(screenTrackRef.current);
@@ -258,7 +247,7 @@ function CallsPage({ user }) {
                         pc.addTrack(screenTrackRef.current, localStreamRef.current);
                     }
                     await renegotiate(pc, peerId);
-                });
+                }
                 screenTrackRef.current.onended = () => {
                     toggleScreenShare();
                 };
@@ -272,9 +261,9 @@ function CallsPage({ user }) {
                 screenTrackRef.current = null;
             }
             setIsScreenSharingOn(false);
-            Object.entries(peerConnections.current).forEach(async ([peerId, pc]) => {
+            for (const [peerId, pc] of Object.entries(peerConnections.current)) {
                 await renegotiate(pc, peerId);
-            });
+            }
         }
     };
 
@@ -314,7 +303,6 @@ function CallsPage({ user }) {
         <div className="calls-page-container container">
             <h2>Звонки</h2>
 
-            {/* Входящий звонок */}
             {!callActive && incomingCall && (
                 <div className="incoming-call-alert">
                     <p>Входящий звонок от пользователя ID {incomingCall.from}</p>
@@ -322,7 +310,6 @@ function CallsPage({ user }) {
                 </div>
             )}
 
-            {/* Выбор типа звонка */}
             {!callActive && !incomingCall && (
                 <>
                     <div className="call-type-choice">
@@ -348,10 +335,9 @@ function CallsPage({ user }) {
                         </label>
                     </div>
 
-                    {/* Если личный звонок */}
                     {callType === "personal" && (
                         <div className="select-user-block">
-                            <h3>Выберите пользователя для звонка:</h3>
+                            <h3>Выберите друга для звонка:</h3>
                             <select onChange={(e) => setSelectedUser(e.target.value)} defaultValue="">
                                 <option value="" disabled>Выберите пользователя</option>
                                 {allUsers.map(u => (
@@ -361,10 +347,9 @@ function CallsPage({ user }) {
                         </div>
                     )}
 
-                    {/* Если групповой звонок */}
                     {callType === "group" && (
                         <div className="select-user-block">
-                            <h3>Выберите участников группового звонка:</h3>
+                            <h3>Выберите участников (друзей) группового звонка:</h3>
                             {allUsers.map(u => (
                                 <label key={u.id}>
                                     <input
@@ -392,7 +377,6 @@ function CallsPage({ user }) {
                 </>
             )}
 
-            {/* Звонок идет */}
             {callActive && (
                 <div className="call-active-block">
                     <h3>Звонок идет...</h3>
