@@ -1,26 +1,26 @@
-// RegisterPage.jsx
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 function RegisterPage({ setUser }) {
     const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const navigate = useNavigate();
 
     const registerAndLogin = async () => {
-        if (!username.trim() || !password.trim()) {
-            console.error('Введите имя и пароль');
+        if (!username.trim() || !email.trim() || !password.trim()) {
+            console.error('Введите имя, email и пароль');
             return;
         }
         try {
             const res = await fetch('http://localhost:5000/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ username, email, password })
             });
             const data = await res.json();
             if (data.status === 'success') {
-                // Автоматический вход
+                // После регистрации сразу логиним
                 const loginRes = await fetch('http://localhost:5000/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -54,6 +54,15 @@ function RegisterPage({ setUser }) {
                     placeholder="Имя пользователя"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                />
+            </div>
+            <div className="form-group">
+                <input
+                    type="email"
+                    placeholder="Ваша почта"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     onKeyDown={handleKeyDown}
                 />
             </div>
