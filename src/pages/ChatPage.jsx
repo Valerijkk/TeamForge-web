@@ -1,18 +1,15 @@
-// ChatPage.jsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
 import './ChatPage.css';
 
-// Создаём socket (при необходимости лучше вынести в Context)
 const socket = io('http://localhost:5000');
 
-// Функция "санитайза" для ввода
 function sanitizeInput(value) {
     const forbiddenSQLPatterns = /drop\s+table|delete\s+from|truncate\s+table|update\s+.*\s+set|insert\s+into|select\s+.*\s+from/gi;
     let cleaned = value.replace(forbiddenSQLPatterns, '');
     cleaned = cleaned.replace(/<[^>]*>/g, '');
-    cleaned = cleaned.slice(0, 500); // Чуть больше, т.к. сообщения могут быть длиннее
+    cleaned = cleaned.slice(0, 500);
     return cleaned.trim();
 }
 
@@ -29,16 +26,15 @@ function ChatPage({ user }) {
     const [messageReactions, setMessageReactions] = useState({});
     const [menuOpenForMsgId, setMenuOpenForMsgId] = useState(null);
 
-    // Модалки пересылки и ответа
     const [replyModalOpen, setReplyModalOpen] = useState(false);
     const [replyTargetId, setReplyTargetId] = useState(null);
     const [replyContent, setReplyContent] = useState('');
+
     const [forwardModalOpen, setForwardModalOpen] = useState(false);
     const [forwardMessageId, setForwardMessageId] = useState(null);
     const [availableChats, setAvailableChats] = useState([]);
     const [selectedChatId, setSelectedChatId] = useState('');
 
-    // Отслеживаем, смонтирован ли компонент
     const mountedRef = useRef(true);
     useEffect(() => {
         mountedRef.current = true;
@@ -47,23 +43,13 @@ function ChatPage({ user }) {
         };
     }, []);
 
-    // Для отслеживания состояния уведомлений в обработчике
     const notificationRef = useRef(notification);
     useEffect(() => {
         notificationRef.current = notification;
     }, [notification]);
 
-    // Запрос разрешения на показ нотификаций при загрузке компонента
-    useEffect(() => {
-        if (Notification && Notification.permission !== "granted" && Notification.permission !== "denied") {
-            Notification.requestPermission();
-        }
-    }, []);
-
-    // Для таймаута статуса
     const timeoutRef = useRef(null);
 
-    // Если пользователь отсутствует – перенаправляем
     useEffect(() => {
         if (!user) {
             navigate('/');
@@ -71,7 +57,6 @@ function ChatPage({ user }) {
         }
     }, [user, navigate]);
 
-    // Функция загрузки сообщений
     const fetchMessages = useCallback(() => {
         const safeSearch = sanitizeInput(search);
         let url = `http://localhost:5000/messages/${chatId}?user_id=${user.id}`;
@@ -88,21 +73,9 @@ function ChatPage({ user }) {
             .catch((err) => console.error('Ошибка при загрузке сообщений:', err));
     }, [chatId, search, user.id]);
 
-    // Функция загрузки реакций
-    const fetchReactions = useCallback(() => {
-        fetch(`http://localhost:5000/reactions/${chatId}`)
-            .then((res) => res.json())
-            .then((data) => {
-                if (mountedRef.current) {
-                    setMessageReactions(data);
-                }
-            })
-            .catch(() => {
-                // Если эндпоинта нет — игнорируем
-            });
-    }, [chatId]);
+    // Если бы был эндпоинт для получения реакций, могли бы подтягивать тут,
+    // но в вашем коде нет отдельного /reactions/<chat_id>, поэтому опустим.
 
-    // Функция получения списка чатов пользователя для пересылки сообщений
     const fetchUserChats = useCallback(() => {
         if (!user) return;
         fetch(`http://localhost:5000/user_chats/${user.id}`)
@@ -115,35 +88,22 @@ function ChatPage({ user }) {
             .catch((err) => console.error('Ошибка при загрузке чатов пользователя:', err));
     }, [user]);
 
-    // Подключение к Socket.IO и установка обработчиков событий
     useEffect(() => {
         socket.emit('join', { chat_id: chatId, username: user?.username || '' });
         fetchMessages();
-        fetchReactions();
         fetchUserChats();
 
         const handleReceiveMessage = (data) => {
-            // Заменяем текст системного сообщения
-            if (data.content === 'Пользователь вошел в чат') {
-                data.content = 'Пользователь не в чате';
-            }
             if (mountedRef.current) {
                 setMessages((prev) => [...prev, data]);
             }
-            // Показываем нотификацию, если включены и сообщение от другого пользователя
             if (notificationRef.current && data.sender_id !== user.id) {
                 if (Notification.permission === "granted") {
-                    new Notification("Новое сообщение", {
-                        body: data.content,
-                        // icon: 'path_to_icon'
-                    });
+                    new Notification("Новое сообщение", { body: data.content });
                 } else if (Notification.permission !== "denied") {
                     Notification.requestPermission().then(permission => {
                         if (permission === "granted") {
-                            new Notification("Новое сообщение", {
-                                body: data.content,
-                                // icon: 'path_to_icon'
-                            });
+                            new Notification("Новое сообщение", { body: data.content });
                         }
                     });
                 }
@@ -153,9 +113,9 @@ function ChatPage({ user }) {
         const handleReceiveReaction = (data) => {
             const { message_id, user_id, reaction } = data;
             if (mountedRef.current) {
-                setMessageReactions((prev) => {
+                setMessageReactions(prev => {
                     const oldReactions = prev[message_id] || [];
-                    const filtered = oldReactions.filter((r) => r.user_id !== user_id);
+                    const filtered = oldReactions.filter(r => r.user_id !== user_id);
                     filtered.push({ user_id, reaction });
                     return { ...prev, [message_id]: filtered };
                 });
@@ -178,13 +138,13 @@ function ChatPage({ user }) {
 
         const handleMessageDeletedForAll = (data) => {
             if (mountedRef.current) {
-                setMessages((prev) => prev.filter((msg) => msg.id !== data.message_id));
+                setMessages(prev => prev.filter(msg => msg.id !== data.message_id));
             }
         };
 
         const handleMessageDeletedForUser = (data) => {
             if (mountedRef.current && data.user_id === user.id) {
-                setMessages((prev) => prev.filter((msg) => msg.id !== data.message_id));
+                setMessages(prev => prev.filter(msg => msg.id !== data.message_id));
             }
         };
 
@@ -205,9 +165,8 @@ function ChatPage({ user }) {
             socket.off('message_deleted_for_user', handleMessageDeletedForUser);
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
         };
-    }, [chatId, user, fetchMessages, fetchReactions, fetchUserChats, navigate]);
+    }, [chatId, user, fetchMessages, fetchUserChats]);
 
-    // Отправка сообщения
     const sendMessage = async () => {
         const safeInput = sanitizeInput(input);
         if (!safeInput && !file) return;
@@ -240,7 +199,6 @@ function ChatPage({ user }) {
         setFile(null);
     };
 
-    // Отправка сообщения при нажатии Enter
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -248,7 +206,6 @@ function ChatPage({ user }) {
         }
     };
 
-    // Отправка реакции
     const sendReaction = (messageId, reaction) => {
         socket.emit('send_reaction', {
             chat_id: chatId,
@@ -259,17 +216,18 @@ function ChatPage({ user }) {
         setMenuOpenForMsgId(null);
     };
 
-    // Модальное окно пересылки
     const openForwardModal = (messageId) => {
         setForwardMessageId(messageId);
         setForwardModalOpen(true);
         setMenuOpenForMsgId(null);
     };
+
     const closeForwardModal = () => {
         setForwardModalOpen(false);
         setForwardMessageId(null);
         setSelectedChatId('');
     };
+
     const confirmForward = async () => {
         if (!selectedChatId || !forwardMessageId) return;
         try {
@@ -292,18 +250,19 @@ function ChatPage({ user }) {
         closeForwardModal();
     };
 
-    // Модальное окно ответа
     const openReplyModal = (messageId) => {
         setReplyTargetId(messageId);
         setReplyContent('');
         setReplyModalOpen(true);
         setMenuOpenForMsgId(null);
     };
+
     const closeReplyModal = () => {
         setReplyModalOpen(false);
         setReplyTargetId(null);
         setReplyContent('');
     };
+
     const confirmReply = () => {
         if (!replyTargetId) return;
         const safeContent = sanitizeInput(replyContent);
@@ -317,7 +276,6 @@ function ChatPage({ user }) {
         closeReplyModal();
     };
 
-    // Удаление сообщения
     const deleteMessage = async (messageId, forAll = false) => {
         const mode = forAll ? 'everyone' : 'me';
         const url = `http://localhost:5000/messages/${messageId}?mode=${mode}&user_id=${user.id}`;
@@ -325,7 +283,7 @@ function ChatPage({ user }) {
             const res = await fetch(url, { method: 'DELETE' });
             const data = await res.json();
             if (data.status === 'success') {
-                await fetchMessages();
+                fetchMessages();
             } else {
                 console.error(`Ошибка удаления: ${data.message}`);
             }
@@ -335,12 +293,10 @@ function ChatPage({ user }) {
         setMenuOpenForMsgId(null);
     };
 
-    // Переключение меню для сообщения
     const toggleMenuForMessage = (msgId) => {
-        setMenuOpenForMsgId((prev) => (prev === msgId ? null : msgId));
+        setMenuOpenForMsgId(prev => (prev === msgId ? null : msgId));
     };
 
-    // Функция для отображения медиа
     const renderMedia = (filename) => {
         if (!filename) return null;
         const ext = filename.split('.').pop().toLowerCase();
@@ -361,7 +317,6 @@ function ChatPage({ user }) {
         );
     };
 
-    // Включение/отключение уведомлений
     const updateNotification = () => {
         setNotification(!notification);
         socket.emit('update_notification', {
@@ -371,7 +326,6 @@ function ChatPage({ user }) {
         });
     };
 
-    // Поиск оригинального сообщения (для ответов)
     const findOriginalMessage = (reply_to_id) => {
         return messages.find((m) => m.id === reply_to_id) || null;
     };
