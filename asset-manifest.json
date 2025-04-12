@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/TeamForge-web/static/css/main.b5d5b282.css",
-    "main.js": "/TeamForge-web/static/js/main.bccb73ac.js",
+    "main.css": "/TeamForge-web/static/css/main.0891046c.css",
+    "main.js": "/TeamForge-web/static/js/main.0e59bdfb.js",
     "index.html": "/TeamForge-web/index.html",
-    "main.b5d5b282.css.map": "/TeamForge-web/static/css/main.b5d5b282.css.map",
-    "main.bccb73ac.js.map": "/TeamForge-web/static/js/main.bccb73ac.js.map"
+    "main.0891046c.css.map": "/TeamForge-web/static/css/main.0891046c.css.map",
+    "main.0e59bdfb.js.map": "/TeamForge-web/static/js/main.0e59bdfb.js.map"
   },
   "entrypoints": [
-    "static/css/main.b5d5b282.css",
-    "static/js/main.bccb73ac.js"
+    "static/css/main.0891046c.css",
+    "static/js/main.0e59bdfb.js"
   ]
 }
