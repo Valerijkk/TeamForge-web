@@ -58,7 +58,12 @@ function App() {
             {/* Шапка с логотипом (кликабелен для смены темы) и навигационным меню */}
             <header>
                 <div className="container nav">
-                    <div className="logo" onClick={toggleTheme} style={{ cursor: 'pointer' }} title="Нажмите, чтобы сменить тему">
+                    <div
+                        className="logo"
+                        onClick={toggleTheme}
+                        style={{ cursor: 'pointer' }}
+                        title="Нажмите, чтобы сменить тему"
+                    >
                         TeamForge
                     </div>
                     <nav className="menu">
@@ -94,7 +99,10 @@ function App() {
                     <Route path="/chats" element={<ChatsPage user={user} />} />
                     <Route path="/chat/:chatId" element={<ChatPage user={user} />} />
                     <Route path="/calls" element={<CallsPage user={user} />} />
-                    <Route path="/calendar" element={<CalendarPage />} />
+
+                    {/* ВОТ ЗДЕСЬ ГЛАВНОЕ ИЗМЕНЕНИЕ: */}
+                    <Route path="/calendar" element={<CalendarPage user={user} />} />
+
                     <Route path="/knowledge" element={<KnowledgeBasePage />} />
                     <Route path="/ai-assistant" element={<AIAssistantPage />} />
                     <Route path="/software" element={<SoftwarePage isAdmin={isAdmin} />} />
