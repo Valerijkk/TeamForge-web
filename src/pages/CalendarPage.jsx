@@ -125,10 +125,7 @@ function CalendarPage({ user }) {
                 onChange={setSelectedDate}
                 value={selectedDate}
                 locale="ru-RU"
-                // Если ваша версия react-calendar поддерживает, оставьте:
-                //calendarType="ISO 8601"
-                // Если нет, уберите calendarType совсем,
-                // чтобы не вызывать "Unsupported calendar type"
+                calendarType="iso8601"
             />
 
             <h3 className="tasks-subtitle">

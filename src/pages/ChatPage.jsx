@@ -73,9 +73,6 @@ function ChatPage({ user }) {
             .catch((err) => console.error('Ошибка при загрузке сообщений:', err));
     }, [chatId, search, user.id]);
 
-    // Если бы был эндпоинт для получения реакций, могли бы подтягивать тут,
-    // но в вашем коде нет отдельного /reactions/<chat_id>, поэтому опустим.
-
     const fetchUserChats = useCallback(() => {
         if (!user) return;
         fetch(`http://localhost:5000/user_chats/${user.id}`)
@@ -317,15 +314,6 @@ function ChatPage({ user }) {
         );
     };
 
-    const updateNotification = () => {
-        setNotification(!notification);
-        socket.emit('update_notification', {
-            chat_id: chatId,
-            user_id: user.id,
-            notifications_enabled: !notification,
-        });
-    };
-
     const findOriginalMessage = (reply_to_id) => {
         return messages.find((m) => m.id === reply_to_id) || null;
     };
@@ -337,7 +325,14 @@ function ChatPage({ user }) {
                     ← Назад к списку чатов
                 </button>
                 <h2 className="chat-title">TeamForge</h2>
-                <button className="notify-toggle" onClick={updateNotification}>
+                <button className="notify-toggle" onClick={() => {
+                    setNotification(!notification);
+                    socket.emit('update_notification', {
+                        chat_id: chatId,
+                        user_id: user.id,
+                        notifications_enabled: !notification,
+                    });
+                }}>
                     {notification ? 'Отключить' : 'Включить'} уведомления
                 </button>
                 {status && <p className="status-message">{status}</p>}
@@ -382,7 +377,7 @@ function ChatPage({ user }) {
                                 </div>
                             )}
                             <div className="small-text message-timestamp">
-                                {new Date(msg.timestamp).toLocaleString()}
+                                {new Date(msg.timestamp + 'Z').toLocaleString()}
                             </div>
 
                             {menuOpenForMsgId === msg.id && (

@@ -57,19 +57,18 @@
 .my-react-calendar .react-calendar__tile {
     height: 50px;
     background: none;
-    margin: 2px;
     border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #333;
+    color: #000; /* более тёмный цвет для номеров дней в светлой теме */
 }
 .my-react-calendar .react-calendar__tile:hover {
     background: #e6e6e6;
 }
 
-/* Сегодня */
-.my-react-calendar .react-calendar__tile--now {
+/* Сегодня (только в месячном виде) */
+.my-react-calendar .react-calendar__month-view__days__day.react-calendar__tile--now {
     background: #fffbe5;
     border: 1px solid #3f51b5;
     color: #333;
@@ -226,12 +225,14 @@ body.dark .my-react-calendar .react-calendar__tile:hover {
     background: #444;
 }
 
-body.dark .my-react-calendar .react-calendar__tile--now {
+/* Сегодня (только в месячном виде) */
+body.dark .my-react-calendar .react-calendar__month-view__days__day.react-calendar__tile--now {
     background: #3e2723;
     border: 1px solid #ffccbc;
     color: #eee;
 }
 
+/* Выбранная дата */
 body.dark .my-react-calendar .react-calendar__tile--active {
     background: #303f9f;
     color: #fff;
@@ -277,4 +278,21 @@ body.dark .btn-add-update {
 }
 body.dark .btn-add-update:hover {
     background-color: #1e7e34;
+}
+
+/* Убираем некорректную подсветку "сегодня" в годовом/десятилетнем/вековом виде */
+.my-react-calendar .react-calendar__year-view__months__month.react-calendar__tile--now,
+.my-react-calendar .react-calendar__decade-view__tile.react-calendar__tile--now,
+.my-react-calendar .react-calendar__century-view__tiles__tile.react-calendar__tile--now {
+    background: none !important;
+    border: none !important;
+    color: inherit !important;
+}
+
+body.dark .my-react-calendar .react-calendar__year-view__months__month.react-calendar__tile--now,
+body.dark .my-react-calendar .react-calendar__decade-view__tile.react-calendar__tile--now,
+body.dark .my-react-calendar .react-calendar__century-view__tiles__tile.react-calendar__tile--now {
+    background: none !important;
+    border: none !important;
+    color: #e0e0e0 !important;
 }

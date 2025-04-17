@@ -83,15 +83,20 @@
 
 /* Каждое сообщение */
 .message {
+    position: relative;
     background-color: #f7f7f7;
     border-radius: 6px;
     padding: 10px;
     margin-bottom: 10px;
     transition: box-shadow 0.3s ease;
-    position: relative;
 }
 .message:hover {
     box-shadow: 0 0 8px rgba(0,0,0,0.06);
+}
+
+/* Поднятие сообщения с открытым меню выше остальных */
+.message:has(.message-menu) {
+    z-index: 10000;
 }
 
 /* Метки */
@@ -142,16 +147,16 @@
 .message-menu {
     position: absolute;
     top: 0;
-    left: 105%;
-    z-index: 999999;
+    left: calc(100% + 8px);
+    z-index: 10001;
     background: #fff;
     border: 1px solid #ccc;
     border-radius: 4px;
     padding: 10px;
-    width: 140px;
+    width: 160px;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 6px;
 }
 
 /* Кнопки в меню */
@@ -206,7 +211,6 @@
     justify-content: center;
     z-index: 1000;
 }
-
 .modal-content {
     background: #fff;
     padding: 20px;
@@ -215,66 +219,51 @@
     box-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
-/* ================================================= */
-/*              Тёмная тема (Dark Theme)            */
-/* ================================================= */
-/* Активируется, если у <body> установлен класс "dark" */
-
+/* Тёмная тема */
 body.dark .back-button {
     background-color: #1e90ff;
 }
 body.dark .back-button:hover {
     background-color: #187bcd;
 }
-
 body.dark .chat-title {
     color: #1e90ff;
 }
-
 body.dark .notify-toggle {
     background-color: #ff8c00;
 }
 body.dark .notify-toggle:hover {
     background-color: #e67e00;
 }
-
 body.dark .status-message {
     color: #1e90ff;
 }
-
 body.dark .chat-container {
     background-color: #2a2a2a;
     border: 1px solid #555;
 }
-
 body.dark .message {
     background-color: #3a3a3a;
 }
 body.dark .message:hover {
     box-shadow: 0 0 8px rgba(255,255,255,0.1);
 }
-
 body.dark .forwarded-label,
 body.dark .reply-label {
     color: #aaa;
 }
-
 body.dark .message-sender {
     color: #f0f0f0;
 }
-
 body.dark .message-text {
     color: #ddd;
 }
-
 body.dark .reactions-block {
     color: #aaa;
 }
-
 body.dark .message-timestamp {
     color: #ccc;
 }
-
 body.dark .message-menu {
     background: #2a2a2a;
     border: 1px solid #555;
@@ -285,20 +274,15 @@ body.dark .message-menu button {
 body.dark .message-menu button:hover {
     background-color: #555;
 }
-
 body.dark .send-button {
     background-color: #218838;
 }
 body.dark .send-button:hover {
     background-color: #1e7e34;
 }
-
-/* Модальные окна */
 body.dark .modal-content {
     background: #2a2a2a;
     color: #f0f0f0;
     box-shadow: 0 2px 10px rgba(0,0,0,0.6);
     border: 1px solid #555;
 }
-
-
