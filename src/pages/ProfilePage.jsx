@@ -151,6 +151,12 @@ function ProfilePage({ user, onLogout }) {
             .catch(error => console.error('Ошибка при удалении друга:', error));
     };
 
+    // Хелпер для корректного отображения UTC-времени
+    const formatUTC = (localStr) => {
+        const iso = localStr.replace(' ', 'T') + ':00Z';
+        return new Date(iso).toLocaleString();
+    };
+
     if (!user) {
         return <div>Пожалуйста, войдите!</div>;
     }
@@ -261,7 +267,7 @@ function ProfilePage({ user, onLogout }) {
                                 {call.call_type === 'personal' ? 'Личный' : 'Групповой'} звонок от{' '}
                                 {call.caller_username}
                                 {call.recipients.length > 0 && <> к {call.recipients.join(', ')}</>}
-                                {' '}с {call.start_time} до {call.end_time}
+                                {' '}с {formatUTC(call.start_time)} до {formatUTC(call.end_time)}
                                 {' '}(Длительность: {call.duration} сек.)
                             </li>
                         ))}
