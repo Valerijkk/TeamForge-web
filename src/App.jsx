@@ -1,13 +1,14 @@
-// App.js
+// src/App.jsx
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
-// Импортируем React-Redux хуки
 import { useSelector, useDispatch } from 'react-redux';
+import io from 'socket.io-client';
 
-// Импорт основных страниц проекта
 import MainPage from './pages/MainPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import ResetPasswordConfirmPage from './pages/ResetPasswordConfirmPage';
 import ProfilePage from './pages/ProfilePage';
 import ChatsPage from './pages/ChatsPage';
 import ChatPage from './pages/ChatPage';
@@ -16,67 +17,68 @@ import CalendarPage from './pages/CalendarPage';
 import KnowledgeBasePage from './pages/KnowledgeBasePage';
 import AIAssistantPage from './pages/AIAssistantPage';
 import SoftwarePage from './pages/SoftwarePage';
-
-// Импорт страниц для сброса пароля
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import ResetPasswordConfirmPage from './pages/ResetPasswordConfirmPage';
-
 import './App.css';
+
+const socket = io('http://localhost:5000');
 
 function App() {
     const navigate = useNavigate();
-
-    // Берём тему из Redux
-    const theme = useSelector((state) => state.theme);
-    // Чтобы менять тему, нужен dispatch
+    const theme = useSelector(state => state.theme);
     const dispatch = useDispatch();
 
-    // Локальное состояние для пользователя
     const [user, setUser] = useState(() => {
         const saved = localStorage.getItem('user');
         return saved ? JSON.parse(saved) : null;
     });
+    const [incomingCall, setIncomingCall] = useState(null);
 
-    // Когда user меняется, обновляем localStorage (чтобы не потерять user при обновлении страницы)
+    // Register for incoming calls whenever user logs in
     useEffect(() => {
         if (user) {
-            localStorage.setItem('user', JSON.stringify(user));
-        } else {
-            localStorage.removeItem('user');
+            socket.emit('register_user', { user_id: user.id });
+            socket.on('incoming_call', data => {
+                setIncomingCall(data);
+            });
         }
+        return () => {
+            socket.off('incoming_call');
+        };
     }, [user]);
 
-    // Когда theme меняется, прописываем её в body.className и сохраняем в localStorage
+    // Theme toggle
     useEffect(() => {
         document.body.className = theme;
         localStorage.setItem('appTheme', theme);
     }, [theme]);
-
-    // Функция переключения темы: отправляем экшен в Redux
     const toggleTheme = () => {
-        const newTheme = theme === 'light' ? 'dark' : 'light';
-        dispatch({ type: 'SET_THEME', payload: newTheme });
+        dispatch({ type: 'SET_THEME', payload: theme === 'light' ? 'dark' : 'light' });
     };
 
-    // Функция выхода
+    // Persist user in localStorage
+    useEffect(() => {
+        if (user) localStorage.setItem('user', JSON.stringify(user));
+        else localStorage.removeItem('user');
+    }, [user]);
+
     const logout = () => {
         setUser(null);
         navigate('/');
     };
 
-    // Для примера условная проверка "админ" (можно оставить как было)
-    const isAdmin = user && user.username === 'admin';
+    const acceptIncomingCall = () => {
+        navigate('/calls');
+        setIncomingCall(null);
+    };
 
     return (
         <>
-            {/* Шапка с логотипом (при клике - toggleTheme) и навигация */}
             <header>
                 <div className="container nav">
                     <div
                         className="logo"
                         onClick={toggleTheme}
-                        style={{ cursor: 'pointer' }}
                         title="Нажмите, чтобы сменить тему"
+                        style={{ cursor: 'pointer' }}
                     >
                         TeamForge
                     </div>
@@ -101,7 +103,21 @@ function App() {
                 </div>
             </header>
 
-            {/* Основной контент + роутинг */}
+            {incomingCall && (
+                <div className="modal-overlay">
+                    <div className="modal-content">
+                        <h3>Входящий звонок</h3>
+                        <p>Пользователь ID {incomingCall.from} вас вызывает.</p>
+                        <div style={{ textAlign: 'right', marginTop: '10px' }}>
+                            <button onClick={acceptIncomingCall}>Принять</button>
+                            <button onClick={() => setIncomingCall(null)} style={{ marginLeft: '8px' }}>
+                                Отклонить
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="container">
                 <Routes>
                     <Route path="/" element={<MainPage />} />
@@ -116,7 +132,10 @@ function App() {
                     <Route path="/calendar" element={<CalendarPage user={user} />} />
                     <Route path="/knowledge" element={<KnowledgeBasePage />} />
                     <Route path="/ai-assistant" element={<AIAssistantPage />} />
-                    <Route path="/software" element={<SoftwarePage isAdmin={isAdmin} />} />
+                    <Route
+                        path="/software"
+                        element={<SoftwarePage isAdmin={user?.username === 'admin'} />}
+                    />
                 </Routes>
             </div>
         </>
