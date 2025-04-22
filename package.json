@@ -4,10 +4,13 @@
   "private": true,
   "homepage": "https://Valerijkk.github.io/TeamForge-web",
   "dependencies": {
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/typography": "^0.5.16",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^13.5.0",
+    "bootstrap": "^5.3.5",
     "react": "^19.0.0",
     "react-calendar": "^5.1.0",
     "react-dom": "^19.0.0",
@@ -19,7 +22,11 @@
     "web-vitals": "^2.1.4"
   },
   "devDependencies": {
-    "gh-pages": "^5.0.0"
+    "@tailwindcss/postcss": "^4.1.4",
+    "autoprefixer": "^10.4.21",
+    "gh-pages": "^5.0.0",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.1.4"
   },
   "scripts": {
     "start": "react-scripts start",
