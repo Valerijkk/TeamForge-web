@@ -27,5 +27,5 @@ function AIAssistantPage() {
     );
 }
 
-// Экспортируем компонент AIAssistantPage, чтобы его можно было импортировать в других файлах
+
 export default AIAssistantPage;
