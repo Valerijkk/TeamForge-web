@@ -20,7 +20,7 @@ function AIAssistantPage() {
                     title="ИИ Помощник"           // Атрибут title для iframe, улучшает доступность
                     width="100%"                  // Задает ширину iframe в 100% от родительского элемента
                     height="1000px"               // Устанавливает фиксированную высоту iframe в 1000 пикселей
-                    style={{ border: 'none' }}    // Применяет ин лайн-стиль: убирает рамку вокруг iframe
+                    style={{ border: 'none' }}
                 ></iframe>
             </div>
         </div>
