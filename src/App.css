@@ -181,7 +181,7 @@ textarea:focus {
 .chat-container {
   border: 1px solid #ddd;
   background-color: #fff;
-  height: 450px;
+  height: 700px;
   overflow-y: auto;
   border-radius: 10px;
   padding: 20px;
