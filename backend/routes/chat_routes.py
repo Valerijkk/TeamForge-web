@@ -159,3 +159,11 @@ def forward_message():
         'forwarded_from_id': new_msg.forwarded_from_id
     }, room=str(to_chat_id))
     return jsonify({'status': 'success', 'message': 'Сообщение переслано', 'new_message_id': new_msg.id})
+
+# получить инфу о конкретном чате
+@chat_bp.route('/chat/<int:chat_id>', methods=['GET'])
+def get_chat(chat_id):
+    chat = Chat.query.get(chat_id)
+    if not chat:
+        return jsonify({'status':'fail','message':'Чат не найден'}),404
+    return jsonify({'id': chat.id, 'name': chat.name, 'is_group': chat.is_group})
