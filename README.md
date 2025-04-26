@@ -72,13 +72,11 @@
 - **Эндпоинты аутентификации и работы с пользователями, чатами, сообщениями, звонками, задачами и программным обеспечением.**
 - **События Socket.IO:** для обмена сообщениями в реальном времени, сигналов WebRTC и обновления уведомлений.
 - **Функции сброса пароля** с использованием Flask-Mail и itsdangerous.
-- 
 ## Полезные ссылки
 
 - [Документация Flask](https://flask.palletsprojects.com/)
 - [Документация Flask-SocketIO](https://flask-socketio.readthedocs.io/)
 - [React Router DOM](https://reactrouter.com/)
-- [ngrok](https://ngrok.com/)
 - [GitHub Pages](https://pages.github.com/)
 
 ---
