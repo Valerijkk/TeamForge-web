@@ -8,13 +8,13 @@ from .extensions import db
 # Модель пользователя
 class User(db.Model):
     # Колонка id - первичный ключ
-    id = db.Column(db.Integer, primary_key=True)  # id
+    id = db.Column(db.Integer, primary_key=True)
     # username - уникальный логин
-    username = db.Column(db.String(80), unique=True, nullable=False)  # username
+    username = db.Column(db.String(80), unique=True, nullable=False)
     # email - уникальный email
-    email = db.Column(db.String(120), unique=True, nullable=False)  # email
+    email = db.Column(db.String(120), unique=True, nullable=False)
     # password_hash - хэш пароля
-    password_hash = db.Column(db.String(128), nullable=False)  # пароль
+    password_hash = db.Column(db.String(128), nullable=False)
 
 # Модель чата
 class Chat(db.Model):

@@ -1,14 +1,9 @@
-# -*- coding: utf-8 -*-
-
-# Импортируем os и создаём Flask-приложение
 import os
 import eventlet
 eventlet.monkey_patch()  # monkey_patch для совместимости socketio + eventlet
 
 from flask import Flask
-# Импортируем свой класс Config
 from .config import Config
-# Импортируем созданные расширения
 from .extensions import db, socketio, mail, cors
 # Импортируем наши блюпринты
 from .routes.auth_routes import auth_bp

@@ -1,10 +1,5 @@
-# -*- coding: utf-8 -*-
-
-# Импортируем нужные модули
 from flask_socketio import emit, join_room, leave_room
-# Импортируем db, socketio
 from ..extensions import db, socketio
-# Импортируем модели
 from ..models import Message, Reaction, ChatUser
 
 # Событие при подключении сокета

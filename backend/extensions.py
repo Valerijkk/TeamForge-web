@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-# Импортируем нужные классы
 from flask_sqlalchemy import SQLAlchemy  # Для работы с БД
 from flask_socketio import SocketIO      # Для WebSocket (SocketIO)
 from flask_mail import Mail             # Для отправки почты

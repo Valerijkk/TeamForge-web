@@ -1,8 +1,4 @@
-# -*- coding: utf-8 -*-
-
-# Импортируем URLSafeTimedSerializer для токенов
 from itsdangerous import URLSafeTimedSerializer
-# Импортируем current_app, чтобы использовать Config
 from flask import current_app
 
 # Функция для генерации токена подтверждения/сброса пароля

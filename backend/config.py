@@ -1,18 +1,13 @@
-# -*- coding: utf-8 -*-
-
-# Импортируем os для работы с системными путями
 import os
 
 # Создаём класс конфигурации
 class Config:
     # Секретный ключ для Flask
-    SECRET_KEY = 'secret!'  # На каждой строчке комментарий
+    SECRET_KEY = 'secret!'
 
-    # Настройки пути к базе данных (sqlite)
     SQLALCHEMY_DATABASE_URI = 'sqlite:///teamforge.db'  # Указываем путь для базы SQLite
     SQLALCHEMY_TRACK_MODIFICATIONS = False  # Отключаем лишние уведомления SQLAlchemy
 
-    # Настройки загрузки файлов
     UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')  # Папка 'uploads' для файлов
 
     # Настройки Flask-Mail

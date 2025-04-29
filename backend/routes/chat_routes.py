@@ -1,11 +1,6 @@
-# -*- coding: utf-8 -*-
-
-# Импортируем нужные модули
 import os
 from flask import Blueprint, request, jsonify, send_from_directory
-# Импортируем наши модели
 from ..models import Chat, ChatUser, Message, DeletedMessage
-# Импортируем db и socketio
 from ..extensions import db, socketio
 
 # Создаём blueprint

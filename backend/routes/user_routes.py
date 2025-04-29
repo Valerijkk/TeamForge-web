@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-# Импортируем нужные модули
 from flask import Blueprint, request, jsonify
 # Импортируем модели
 from ..models import User, ChatUser, Message
