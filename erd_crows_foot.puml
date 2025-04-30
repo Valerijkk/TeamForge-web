@@ -1,0 +1,55 @@
+' docs/diagrams/erd_crows_foot.puml
+@startuml ERD_CrowsFoot
+hide circle
+skinparam linetype ortho
+
+entity "users" as users {
+  * user_id : PK
+  --
+  email
+  password_hash
+  nickname
+}
+
+entity "chats" as chats {
+  * chat_id : PK
+  title
+  is_group
+}
+
+entity "chats_users" as cu {
+  * chat_id : FK
+  * user_id : FK
+}
+
+entity "messages" as msgs {
+  * msg_id : PK
+  chat_id : FK
+  author_id : FK
+  body
+  created_at
+}
+
+entity "tasks" as tasks {
+  * task_id : PK
+  owner_id : FK
+  title
+  due_date
+  priority
+}
+
+entity "call_logs" as calls {
+  * call_id : PK
+  chat_id : FK
+  started_at
+  ended_at
+}
+
+' Crow’s Foot cardinalities
+users ||--o{ cu
+chats ||--o{ cu
+chats ||--|{ msgs
+users ||--|{ msgs : authored
+users ||--o{ tasks
+chats ||--o{ calls
+@enduml

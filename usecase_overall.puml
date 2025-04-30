@@ -1,0 +1,20 @@
+' docs/diagrams/usecase_overall.puml
+@startuml UseCaseOverall
+left to right direction
+actor Developer
+rectangle TeamForge {
+  (Регистрация / вход)
+  (Обмен сообщениями)
+  (Групповые звонки)
+  (Управление задачами)
+  (Чтение базы знаний)
+  (Админ-CRUD ПО) as AdminCRUD
+}
+Developer --> (Регистрация / вход)
+Developer --> (Обмен сообщениями)
+Developer --> (Групповые звонки)
+Developer --> (Управление задачами)
+Developer --> (Чтение базы знаний)
+actor Admin
+Admin --> AdminCRUD
+@enduml
