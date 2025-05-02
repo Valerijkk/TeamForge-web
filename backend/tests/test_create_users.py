@@ -42,7 +42,7 @@ def log_test_result(message):
     logging.info(message)
     print(message)  # Также выводим в консоль
 
-@pytest.mark.parametrize("i", range(1, 101))  # Создаём 100 тестов
+@pytest.mark.parametrize("i", range(1, 1000))  # Создаём 100 тестов
 def test_create_user(i):
     """Тест для создания 100 пользователей"""
     username = f"user{i}_{generate_random_string(5)}"
