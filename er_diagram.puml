@@ -79,5 +79,4 @@ users ||--o{ tasks
 chats ||--o{ calls
 users ||--o{ calls
 users ||--o{ fr : friends
-tasks ||--o{ sw : "related to"  ' optional link
 @enduml
