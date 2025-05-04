@@ -1,0 +1,23 @@
+@startuml component-diagram
+skinparam componentStyle rectangle
+package "Client Tier" {
+  [React SPA] <<browser>>
+}
+package "API Tier" {
+  [Flask REST API] <<framework>>
+  [Socket.IO Gateway] <<framework>>
+}
+package "Data Tier" {
+  database "SQLite / PostgreSQL" as DB
+  [Redis Pub/Sub] <<cache>>
+}
+package "Media Tier" {
+  [Coturn] <<sfu>>
+}
+[React SPA] --> [Flask REST API] : HTTPS + JWT
+[React SPA] ..> [Socket.IO Gateway] : WebSocket (+fallback)
+[Socket.IO Gateway] ..> [Redis Pub/Sub] : publish / subscribe
+[Flask REST API] --> DB : SQLAlchemy
+[Socket.IO Gateway] --> DB : CallLog write
+[React SPA] ..> [Coturn] : DTLS-SRTP (ICE)
+@enduml

@@ -1,0 +1,21 @@
+@startuml usecase-diagram
+left to right direction
+actor User
+actor Admin
+rectangle TeamForge {
+  (Register / Login) as UC1
+  (Send Message) as UC2
+  (Join Call) as UC3
+  (Manage Tasks) as UC4
+  (Search Knowledge Base) as UC5
+  (Ask AI-Assistant) as UC6
+  (Manage Software Directory) as UC8
+}
+User --> UC1
+User --> UC2
+User --> UC3
+User --> UC4
+User --> UC5
+User --> UC6
+Admin --> UC8
+@enduml
