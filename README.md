@@ -87,5 +87,6 @@
 
 ---
 Протестировать можно тут [тык](https://Valerijkk.github.io/TeamForge-web)
+или запуск локально при наличии докера docker compose up --build -d
 ---
 © Valerijkk – Все права защищены.

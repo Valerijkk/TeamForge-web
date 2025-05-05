@@ -1,0 +1,10 @@
+# python cache
+__pycache__/
+*.py[cod]
+# тесты и логи
+tests/
+*.log
+# IDE/VC
+.idea/
+.vscode/
+.git/

@@ -42,6 +42,9 @@ def create_app():
     # Создаём таблицы, если их нет
     with app.app_context():
         db.create_all()
+    @app.route("/healthz", methods=["GET"])
+    def health_check():
+        return "OK", 200
 
     return app
 
