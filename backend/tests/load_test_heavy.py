@@ -16,7 +16,6 @@ from typing import Dict, List
 
 from locust import HttpUser, task, between, events, main as locust_main
 
-
 # ─────────── НАСТРОЙКИ ─────────────────────────────────────────
 USERS_TOTAL  = 1_000                    # сколько аккаунтов генерируем заранее
 DEFAULT_VUS  = 50                       # одновременно активных VU
