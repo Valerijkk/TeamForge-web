@@ -11,7 +11,7 @@ import requests
 import pytest
 
 # ===== базовые настройки =====
-BASE_URL = "http://localhost:5000"   # подменяй, если у тебя другой порт/хост
+BASE_URL = "http://127.0.0.1:5000"   # подменяй, если у тебя другой порт/хост
 
 # Каталог и файл логов
 log_dir  = os.path.join(os.getcwd(), 'logs')
