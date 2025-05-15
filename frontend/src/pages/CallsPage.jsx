@@ -9,7 +9,7 @@ const socket = io('http://localhost:5000');
 export default function CallsPage({ user }) {
     const navigate = useNavigate();
 
-    /* ------------------------------------------------- UI state */
+    /* ------------------------------------------------- Состояние UI */
     const [callType, setCallType]             = useState('personal');
     const [allUsers, setAllUsers]             = useState([]);
     const [selectedUser, setSelectedUser]     = useState('');
@@ -24,7 +24,7 @@ export default function CallsPage({ user }) {
     const [camOn, setCamOn]                   = useState(false);
     const [screenOn, setScreenOn]             = useState(false);
 
-    /* -------------------------- local media & peers ------------- */
+    /* -------------------------- локальные медиа-данные и пиры ------------- */
     const audioOnly          = useMemo(() => ({ audio: true, video: false }), []);
     const camOnly            = useMemo(() => ({ video: true }), []);
     const screenVid          = useMemo(() => ({ video: true }), []);
@@ -40,14 +40,14 @@ export default function CallsPage({ user }) {
     const mounted = useRef(true);
     useEffect(() => () => { mounted.current = false; }, []);
 
-    /* ------------------------ renegotiate helper ---------------- */
+    /* ------------------------ хелпер для повторного согласования SDP ---------------- */
     const renegotiate = useCallback(async (pc, peerId) => {
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         socket.emit('webrtc_offer', { to: peerId, from: user.id, sdp: pc.localDescription });
     }, [user.id]);
 
-    /* ---------------------- create RTCPeerConnection ------------ */
+    /* ---------------------- создание RTCPeerConnection ------------ */
     const createPC = useCallback(peerId => {
         const pc = new RTCPeerConnection({
             iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
@@ -71,7 +71,7 @@ export default function CallsPage({ user }) {
                 const entry = prev[peerId] ?? { audio: null, video: [] };
                 if (e.track.kind === 'audio') entry.audio = e.track;
                 else {
-                    // не дублировать
+                    // не дублировать видеотреки
                     if (!entry.video.some(v => v.id === e.track.id)) entry.video.push(e.track);
                 }
                 return { ...prev, [peerId]: entry };
@@ -82,10 +82,11 @@ export default function CallsPage({ user }) {
         return pc;
     }, [user.id]);
 
-    /* -------------------------- sockets ------------------------- */
+    /* -------------------------- WebSocket-события ------------------------- */
     useEffect(() => {
         if (!user) { navigate('/'); return; }
 
+        // загрузить список друзей
         fetch(`http://localhost:5000/friends/${user.id}`)
             .then(r => r.json())
             .then(d => mounted.current && setAllUsers(d))
@@ -93,8 +94,10 @@ export default function CallsPage({ user }) {
 
         socket.emit('register_user', { user_id: user.id });
 
+        // когда кто-то звонит
         socket.on('incoming_call', d => mounted.current && setIncomingCall(d));
 
+        // обработка входящего предложения (offer) от пира
         socket.on('webrtc_offer', async d => {
             const pc = createPC(d.from);
             await pc.setRemoteDescription(new RTCSessionDescription(d.sdp));
@@ -103,22 +106,25 @@ export default function CallsPage({ user }) {
             socket.emit('webrtc_answer', { to: d.from, from: user.id, sdp: pc.localDescription });
         });
 
+        // прием ответа (answer) на наше предложение
         socket.on('webrtc_answer', async d => {
             const pc = peerConnsRef.current[d.from];
             pc && await pc.setRemoteDescription(new RTCSessionDescription(d.sdp));
         });
 
+        // получение ICE-кандидатов
         socket.on('webrtc_candidate', async d => {
             const pc = peerConnsRef.current[d.from];
             pc && d.candidate && await pc.addIceCandidate(new RTCIceCandidate(d.candidate));
         });
 
+        // завершение звонка
         socket.on('end_call', leaveCallSilent);
 
         return () => socket.removeAllListeners();
     }, [user, navigate, createPC]);
 
-    /* ------------------------- call flow ------------------------ */
+    /* ------------------------- логика звонков ------------------------ */
     const ensureBaseAudio = async () => {
         if (!localStreamRef.current) {
             localStreamRef.current = await navigator.mediaDevices.getUserMedia(audioOnly);
@@ -155,7 +161,7 @@ export default function CallsPage({ user }) {
         if (targets.length) joinPeers(targets, false);
     };
 
-    /* -------------------- media toggles ------------------------ */
+    /* -------------------- переключение медиа ------------------------ */
     const toggleMic = () => {
         if (!localStreamRef.current) return;
         localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = !micOn; });
@@ -169,6 +175,7 @@ export default function CallsPage({ user }) {
             camTrackRef.current = cam.getVideoTracks()[0];
             localStreamRef.current.addTrack(camTrackRef.current);
             setCamOn(true);
+            // при добавлении камеры обновляем SDP для всех пиров
             for (const [pid, pc] of Object.entries(peerConnsRef.current)) {
                 pc.addTrack(camTrackRef.current, localStreamRef.current);
                 await renegotiate(pc, pid);
@@ -194,6 +201,7 @@ export default function CallsPage({ user }) {
                 pc.addTrack(screenTrackRef.current, localStreamRef.current);
                 await renegotiate(pc, pid);
             }
+            // когда пользователь прекращает шарить экран
             screenTrackRef.current.onended = toggleScreen;
         } else {
             localStreamRef.current.removeTrack(screenTrackRef.current);
@@ -206,7 +214,7 @@ export default function CallsPage({ user }) {
         }
     };
 
-    /* -------------------- end & history ------------------------ */
+    /* -------------------- завершение и история звонков ------------------------ */
     const cleanUp = () => {
         Object.values(peerConnsRef.current).forEach(pc => pc.close());
         peerConnsRef.current = {};
@@ -242,15 +250,15 @@ export default function CallsPage({ user }) {
         cleanUp();
     };
 
-    /* ------------------------- render -------------------------- */
+    /* ------------------------- рендер -------------------------- */
     return (
         <div className="calls-page-container container">
             <h2>Звонки</h2>
 
-            {/* incoming */}
+            {/* Входящий звонок */}
             {!callActive && incomingCall && (
                 <div className="incoming-call-alert">
-                    <p>Входящий звонок от ID {incomingCall.from}</p>
+                    <p>Входящий звонок от ID {incomingCall.from}</p>
                     <button onClick={acceptCall}>Принять</button>
                     <button onClick={() => setIncomingCall(null)} style={{ marginLeft: 8 }}>
                         Отклонить
@@ -258,14 +266,14 @@ export default function CallsPage({ user }) {
                 </div>
             )}
 
-            {/* prepare */}
+            {/* Подготовка к звонку */}
             {!callActive && !incomingCall && (
                 <>
                     <div className="call-type-choice">
                         <label><input type="radio" value="personal"
-                                      checked={callType === 'personal'} onChange={()=>setCallType('personal')} /> Личный</label>
+                                      checked={callType === 'personal'} onChange={()=>setCallType('personal')} /> Личный</label>
                         <label><input type="radio" value="group"
-                                      checked={callType === 'group'} onChange={()=>setCallType('group')} /> Групповой</label>
+                                      checked={callType === 'group'} onChange={()=>setCallType('group')} /> Групповой</label>
                     </div>
 
                     {callType === 'personal' && (
@@ -288,7 +296,7 @@ export default function CallsPage({ user }) {
                                            onChange={e=>{
                                                const id = String(u.id);
                                                setSelectedUsers(p=> e.target.checked ? [...p,id] : p.filter(x=>x!==id));
-                                           }}/> {u.username}
+                                           }}/> {u.username}
                                 </label>
                             ))}
                         </div>
@@ -298,22 +306,22 @@ export default function CallsPage({ user }) {
                 </>
             )}
 
-            {/* active */}
+            {/* Активный звонок */}
             {callActive && (
                 <div className="call-active-block">
                     <h3>Звонок идёт…</h3>
 
                     <div className="video-streams-container">
-                        {/* local */}
+                        {/* свой поток */}
                         <div className="video-block">
                             <h4>Вы</h4>
                             <video autoPlay muted playsInline ref={v=>v&&(v.srcObject = localStreamRef.current)} />
                         </div>
 
-                        {/* remote */}
+                        {/* потоки собеседников */}
                         {Object.entries(remoteStreams).map(([pid, obj])=>(
                             <div className="video-block" key={pid}>
-                                <h4>Пользователь {pid}</h4>
+                                <h4>Пользователь {pid}</h4>
 
                                 {/* камера */}
                                 {obj.video[0] && (
@@ -331,7 +339,7 @@ export default function CallsPage({ user }) {
                                     />
                                 )}
 
-                                {/* звук — без UI */}
+                                {/* звук без UI */}
                                 {obj.audio && (
                                     <audio
                                         autoPlay
@@ -345,13 +353,13 @@ export default function CallsPage({ user }) {
 
                     <div className="call-controls">
                         <button onClick={toggleMic} className="toggle-mic-btn">
-                            {micOn ? 'Выключить микрофон' : 'Включить микрофон'}
+                            {micOn ? 'Выключить микрофон' : 'Включить микрофон'}
                         </button>
                         <button onClick={toggleCam} className="toggle-webcam-btn">
-                            {camOn ? 'Выключить камеру' : 'Включить камеру'}
+                            {camOn ? 'Выключить камеру' : 'Включить камеру'}
                         </button>
                         <button onClick={toggleScreen} className="toggle-share-btn">
-                            {screenOn ? 'Остановить шаринг' : 'Поделиться экраном'}
+                            {screenOn ? 'Остановить шаринг' : 'Поделиться экраном'}
                         </button>
                         <button onClick={leaveCall} className="end-call-btn">Завершить</button>
                     </div>

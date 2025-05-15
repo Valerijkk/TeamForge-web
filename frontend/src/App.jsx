@@ -18,6 +18,7 @@ import AIAssistantPage from './pages/AIAssistantPage';
 import SoftwarePage from './pages/SoftwarePage';
 import './App.css';
 
+// Инициализируем соединение с сервером сокетов
 const socket = io('http://localhost:5000');
 
 function App() {
@@ -25,13 +26,15 @@ function App() {
     const theme = useSelector(state => state.theme);
     const dispatch = useDispatch();
 
+    // Состояние текущего пользователя, загружаем из localStorage при старте
     const [user, setUser] = useState(() => {
         const saved = localStorage.getItem('user');
         return saved ? JSON.parse(saved) : null;
     });
+    // Состояние входящего звонка (если есть)
     const [incomingCall, setIncomingCall] = useState(null);
 
-    // Register for incoming calls whenever user logs in
+    // Регистрируем пользователя на события входящих звонков при авторизации
     useEffect(() => {
         if (user) {
             socket.emit('register_user', { user_id: user.id });
@@ -40,11 +43,12 @@ function App() {
             });
         }
         return () => {
+            // Очищаем обработчик при размонтировании или выходе пользователя
             socket.off('incoming_call');
         };
     }, [user]);
 
-    // Theme toggle
+    // Переключение темы (светлая/тёмная) и сохранение выбора в localStorage
     useEffect(() => {
         document.body.className = theme;
         localStorage.setItem('appTheme', theme);
@@ -53,17 +57,22 @@ function App() {
         dispatch({ type: 'SET_THEME', payload: theme === 'light' ? 'dark' : 'light' });
     };
 
-    // Persist user in localStorage
+    // Сохраняем или удаляем данные пользователя в localStorage при изменении user
     useEffect(() => {
-        if (user) localStorage.setItem('user', JSON.stringify(user));
-        else localStorage.removeItem('user');
+        if (user) {
+            localStorage.setItem('user', JSON.stringify(user));
+        } else {
+            localStorage.removeItem('user');
+        }
     }, [user]);
 
+    // Выход пользователя (очищаем состояние и перенаправляем на главную)
     const logout = () => {
         setUser(null);
         navigate('/');
     };
 
+    // Обработка принятия входящего звонка
     const acceptIncomingCall = () => {
         navigate('/calls');
         setIncomingCall(null);
@@ -71,6 +80,7 @@ function App() {
 
     return (
         <>
+            {/* Шапка приложения с логотипом и навигацией */}
             <header>
                 <div className="container nav">
                     <div
@@ -102,6 +112,7 @@ function App() {
                 </div>
             </header>
 
+            {/* Модальное окно при входящем звонке */}
             {incomingCall && (
                 <div className="modal-overlay">
                     <div className="modal-content">
@@ -117,6 +128,7 @@ function App() {
                 </div>
             )}
 
+            {/* Основное содержимое с роутингом */}
             <div className="container">
                 <Routes>
                     <Route path="/" element={<MainPage />} />

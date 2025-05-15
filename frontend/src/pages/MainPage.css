@@ -1,4 +1,3 @@
-/* Основной контейнер страницы */
 .main-page {
     position: relative;
     background: url('https://i.pinimg.com/originals/52/26/26/5226263823e0e03f7d04dfaa8abd9341.gif') no-repeat center center;
@@ -9,7 +8,6 @@
     justify-content: center;
 }
 
-/* Полупрозрачное затемнение для лучшей читаемости текста */
 .overlay {
     background-color: rgba(0, 0, 0, 0.6);
     padding: 2rem 3rem;
@@ -58,17 +56,14 @@
 /* Активируется, если у <body> установлен класс "dark" */
 
 body.dark .main-page {
-    /* Затемняем фоновое изображение в тёмном режиме */
     filter: brightness(0.75);
 }
 
 body.dark .overlay {
-    /* Повышаем непрозрачность затемнения для лучшей читаемости */
     background-color: rgba(0, 0, 0, 0.8);
 }
 
 body.dark .cta-button {
-    /* Немного темнее кнопка для тёмного режима */
     background-color: #0056b3;
 }
 

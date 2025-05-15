@@ -2,21 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './ChatsPage.css';
 
-function sanitizeInput(value) {
-    const forbiddenSQLPatterns = /drop\s+table|delete\s+from|truncate\s+table|update\s+.*\s+set|insert\s+into|select\s+.*\s+from/gi;
-    let cleaned = value.replace(forbiddenSQLPatterns, '');
-    cleaned = cleaned.replace(/<[^>]*>/g, '');
-    cleaned = cleaned.slice(0, 100);
-    return cleaned.trim();
-}
-
 function ChatsPage({ user }) {
+    // Состояние: список чатов, все друзья и выбранные участники
     const [chats, setChats] = useState([]);
-    const [allFriends, setAllFriends] = useState([]); // список друзей
+    const [allFriends, setAllFriends] = useState([]);
     const [selected, setSelected] = useState([]);
     const [chatName, setChatName] = useState('');
     const navigate = useNavigate();
 
+    // Функция для очистки потенциально опасного ввода
+    function sanitizeInput(value) {
+        const forbiddenSQLPatterns = /drop\s+table|delete\s+from|truncate\s+table|update\s+.*\s+set|insert\s+into|select\s+.*\s+from/gi;
+        let cleaned = value.replace(forbiddenSQLPatterns, '');
+        cleaned = cleaned.replace(/<[^>]*>/g, '');
+        cleaned = cleaned.slice(0, 100);
+        return cleaned.trim();
+    }
+
+    // Загрузка чатов пользователя и списка друзей при монтировании
     useEffect(() => {
         if (!user) {
             navigate('/');
@@ -24,6 +27,7 @@ function ChatsPage({ user }) {
         }
         let isMounted = true;
 
+        // Получаем чаты
         fetch(`http://localhost:5000/user_chats/${user.id}`)
             .then(res => res.json())
             .then(data => {
@@ -33,7 +37,7 @@ function ChatsPage({ user }) {
             })
             .catch(err => console.error(err));
 
-        // Заменяем /users на /friends/<user.id>
+        // Получаем друзей
         fetch(`http://localhost:5000/friends/${user.id}`)
             .then(res => res.json())
             .then(data => {
@@ -48,6 +52,7 @@ function ChatsPage({ user }) {
         };
     }, [user, navigate]);
 
+    // Переключение включения/отключения пользователя в списке участников
     const toggleSelect = (u) => {
         if (selected.find(s => s.id === u.id)) {
             setSelected(selected.filter(s => s.id !== u.id));
@@ -56,6 +61,7 @@ function ChatsPage({ user }) {
         }
     };
 
+    // Создание нового группового чата
     const createChat = async () => {
         const safeName = sanitizeInput(chatName);
         if (!safeName || selected.length === 0) {
@@ -76,6 +82,7 @@ function ChatsPage({ user }) {
             });
             const data = await res.json();
             if (data.status === 'success') {
+                // Добавляем новый чат в список и переходим в него
                 const newChat = { id: data.chat_id, name: safeName, is_group: true };
                 setChats(prev => [...prev, newChat]);
                 navigate(`/chat/${newChat.id}`);
@@ -87,6 +94,7 @@ function ChatsPage({ user }) {
         }
     };
 
+    // Переход в выбранный чат
     const openChat = (chat) => {
         navigate(`/chat/${chat.id}`);
     };

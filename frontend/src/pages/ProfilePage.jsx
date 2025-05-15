@@ -3,9 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import './ProfilePage.css';
 
 function ProfilePage({ user, onLogout }) {
+    // Хук для навигации между страницами
     const navigate = useNavigate();
+
+    // Состояние статистики чатов и сообщений
     const [chatsCount, setChatsCount] = useState(0);
     const [messagesCount, setMessagesCount] = useState(0);
+    // Состояние для документов, друзей, запросов и истории звонков
     const [docs, setDocs] = useState([]);
     const [friends, setFriends] = useState([]);
     const [friendRequests, setFriendRequests] = useState([]);
@@ -13,6 +17,7 @@ function ProfilePage({ user, onLogout }) {
     const [searchResults, setSearchResults] = useState([]);
     const [callHistory, setCallHistory] = useState([]);
 
+    // Флаг, чтобы не обновлять состояние после размонтирования
     const mountedRef = useRef(true);
     useEffect(() => {
         mountedRef.current = true;
@@ -21,6 +26,7 @@ function ProfilePage({ user, onLogout }) {
         };
     }, []);
 
+    // Загрузка базовых данных профиля
     const loadProfileData = useCallback(() => {
         fetch(`http://localhost:5000/profile_data/${user.id}`)
             .then(res => res.json())
@@ -34,6 +40,7 @@ function ProfilePage({ user, onLogout }) {
             .catch(error => console.error('Ошибка получения данных профиля:', error));
     }, [user.id]);
 
+    // Загрузка списка друзей
     const loadFriends = useCallback(() => {
         fetch(`http://localhost:5000/friends/${user.id}`)
             .then(res => res.json())
@@ -45,6 +52,7 @@ function ProfilePage({ user, onLogout }) {
             .catch(error => console.error('Ошибка получения друзей:', error));
     }, [user.id]);
 
+    // Загрузка входящих запросов в друзья
     const loadFriendRequests = useCallback(() => {
         fetch(`http://localhost:5000/friend_requests/${user.id}`)
             .then(res => res.json())
@@ -56,6 +64,7 @@ function ProfilePage({ user, onLogout }) {
             .catch(error => console.error('Ошибка получения запросов в друзья:', error));
     }, [user.id]);
 
+    // Загрузка истории звонков
     const loadCallHistory = useCallback(() => {
         fetch(`http://localhost:5000/call_history/${user.id}`)
             .then(res => res.json())
@@ -67,6 +76,7 @@ function ProfilePage({ user, onLogout }) {
             .catch(error => console.error('Ошибка получения истории звонков:', error));
     }, [user.id]);
 
+    // При монтировании компонента загружаем все данные; если нет user — редирект на /
     useEffect(() => {
         if (!user) {
             navigate('/');
@@ -78,6 +88,7 @@ function ProfilePage({ user, onLogout }) {
         loadCallHistory();
     }, [user, navigate, loadProfileData, loadFriends, loadFriendRequests, loadCallHistory]);
 
+    // Поиск пользователей для добавления в друзья
     const handleSearch = () => {
         if (searchQuery.trim() !== '') {
             fetch(`http://localhost:5000/search_users?q=${searchQuery}`)
@@ -96,6 +107,7 @@ function ProfilePage({ user, onLogout }) {
         }
     };
 
+    // Отправка, подтверждение, отклонение запросов в друзья и удаление друга
     const addFriend = (receiverId) => {
         const body = { requester_id: user.id, receiver_id: receiverId };
         fetch('http://localhost:5000/friend_request', {
@@ -104,9 +116,7 @@ function ProfilePage({ user, onLogout }) {
             body: JSON.stringify(body)
         })
             .then(res => res.json())
-            .then(data => {
-                console.log('Ответ addFriend:', data.message);
-            })
+            .then(data => console.log('Ответ addFriend:', data.message))
             .catch(error => console.error('Ошибка при добавлении в друзья:', error));
     };
 
@@ -151,7 +161,7 @@ function ProfilePage({ user, onLogout }) {
             .catch(error => console.error('Ошибка при удалении друга:', error));
     };
 
-    // Хелпер для корректного отображения UTC-времени
+    // Преобразование локальной строки времени в человекочитаемый формат UTC
     const formatUTC = (localStr) => {
         const iso = localStr.replace(' ', 'T') + ':00Z';
         return new Date(iso).toLocaleString();
@@ -165,12 +175,14 @@ function ProfilePage({ user, onLogout }) {
         <div className="profile-page container">
             <h2 className="profile-title">Профиль пользователя</h2>
 
+            {/* Основная информация */}
             <div className="profile-info">
                 <p><strong>Имя пользователя:</strong> {user.username}</p>
                 <p><strong>Количество чатов:</strong> {chatsCount}</p>
                 <p><strong>Количество сообщений:</strong> {messagesCount}</p>
             </div>
 
+            {/* Список загруженных документов */}
             <div className="profile-docs">
                 <h3>Отправленные документы:</h3>
                 {docs.length === 0 ? (
@@ -194,6 +206,7 @@ function ProfilePage({ user, onLogout }) {
 
             <hr />
 
+            {/* Список друзей */}
             <div className="profile-friends">
                 <h3>Друзья</h3>
                 {friends.length === 0 ? (
@@ -212,6 +225,7 @@ function ProfilePage({ user, onLogout }) {
 
             <hr />
 
+            {/* Входящие запросы в друзья */}
             <div className="profile-requests">
                 <h3>Входящие запросы в друзья</h3>
                 {friendRequests.length === 0 ? (
@@ -231,6 +245,7 @@ function ProfilePage({ user, onLogout }) {
 
             <hr />
 
+            {/* Поиск новых друзей */}
             <div className="profile-search">
                 <h3>Добавить друга</h3>
                 <div>
@@ -256,6 +271,7 @@ function ProfilePage({ user, onLogout }) {
 
             <hr />
 
+            {/* История звонков */}
             <div className="profile-calls">
                 <h3>История звонков</h3>
                 {callHistory.length === 0 ? (
@@ -277,6 +293,7 @@ function ProfilePage({ user, onLogout }) {
 
             <hr />
 
+            {/* Кнопка выхода */}
             <div className="profile-logout">
                 <button onClick={onLogout}>Выйти</button>
             </div>

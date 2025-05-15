@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import './KnowledgeBasePage.css'; // Подключаем отдельный файл стилей
+import './KnowledgeBasePage.css';
 
 const knowledgeArticles = [
     {

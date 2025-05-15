@@ -1,16 +1,20 @@
-// ResetPasswordPage.jsx
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 
+// Компонент страницы для запроса сброса пароля
 function ResetPasswordPage() {
+    // Состояние для хранения введённого email
     const [email, setEmail] = useState('');
 
+    // Отправка запроса на сброс пароля
     const handleResetRequest = async () => {
+        // Проверяем, что поле email не пустое
         if (!email.trim()) {
             console.error('Введите ваш email');
             return;
         }
         try {
+            // Отправляем POST-запрос на сервер с email
             const res = await fetch('http://localhost:5000/reset-password', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -35,6 +39,7 @@ function ResetPasswordPage() {
                     onChange={(e) => setEmail(e.target.value)}
                 />
             </div>
+            {/* Кнопка для отправки инструкции на указанный email */}
             <button onClick={handleResetRequest}>Отправить инструкцию</button>
             <p>
                 Вернуться к <Link to="/login">Входу</Link>
