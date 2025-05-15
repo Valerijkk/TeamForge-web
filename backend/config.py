@@ -12,7 +12,6 @@ class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "secret!")
 
     # ───────  База данных  ────────────────────────────────────────────────────
-    # Можно задать готовый DSN через DATABASE_URL, либо 5 переменными ниже.
     DB_USER     = os.getenv("POSTGRES_USER", "postgres")
     DB_PASSWORD = quote_plus(os.getenv("POSTGRES_PASSWORD", "postgres"))
     DB_HOST     = os.getenv("POSTGRES_HOST", "localhost")

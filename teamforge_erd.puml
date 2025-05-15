@@ -98,7 +98,7 @@ chat ||--o{ chat_user
 
 chat   ||--o{ message
 user   ||--o{ message : sender
-message ||--|| message : reply_to
+
 
 user   ||--o{ reaction
 message ||--o{ reaction

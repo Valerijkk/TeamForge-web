@@ -419,7 +419,7 @@ body.dark a {
 body.dark a:hover {
   color: #63b3ff;
 }
-/* Убираем подсветку "сегодня" в годовом, десятилетнем и вековом видах */
+
 body.dark .my-react-calendar .react-calendar__year-view .react-calendar__tile--now,
 body.dark .my-react-calendar .react-calendar__decade-view .react-calendar__tile--now,
 body.dark .my-react-calendar .react-calendar__century-view .react-calendar__tile--now {
