@@ -1,4 +1,3 @@
-# backend/app.py
 import os
 import eventlet
 eventlet.monkey_patch()

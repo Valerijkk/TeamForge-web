@@ -1,10 +1,5 @@
-# -*- coding: utf-8 -*-
-
-# Импортируем нужные модули
 from flask import Blueprint, request, jsonify
-# Импортируем модели
 from ..models import Friendship, User
-# Импортируем db
 from ..extensions import db
 
 # Создаём blueprint для дружбы

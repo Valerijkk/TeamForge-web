@@ -1,8 +1,4 @@
-# -*- coding: utf-8 -*-
-
-# Импортируем datetime для полей дат
 from datetime import datetime, date
-# Импортируем db из extensions
 from .extensions import db
 
 # Модель пользователя

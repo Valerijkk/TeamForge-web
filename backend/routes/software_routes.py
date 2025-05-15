@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from flask import Blueprint, request, jsonify
 from ..extensions import db
 from ..models import Software
