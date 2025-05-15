@@ -1,4 +1,4 @@
-## 8. README\_DOCKER.md  (памятка)
+##  README\_DOCKER.md  (памятка)
 
 ````markdown
 # Быстрый старт
