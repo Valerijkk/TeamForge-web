@@ -1,0 +1,104 @@
+@startuml
+' Общие настройки стиля
+skinparam backgroundColor #F9F9F9
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #4F81BD
+  ArrowColor #4F81BD
+  FontName Arial
+  FontSize 12
+}
+
+' Макросы для таблиц и первичных ключей
+!define table(x) class x << (T,#DDF4FF) >>
+!define primary_key(x) <u>x</u>
+
+' Таблица Пользователь
+table(Пользователь) {
+  primary_key(id): int
+  username       : varchar
+  email          : varchar
+  password_hash  : varchar
+}
+
+' Таблица Чат
+table(Чат) {
+  primary_key(id): int
+  name           : varchar
+  is_group       : bool
+}
+
+' Таблица УчастникЧата (ChatUser)
+table(УчастникЧата) {
+  primary_key(id)            : int
+  chat_id                    : int «FK»
+  user_id                    : int «FK»
+  notifications_enabled      : bool
+}
+Пользователь ||--o{ УчастникЧата : участвует
+Чат         ||--o{ УчастникЧата : содержит
+
+' Таблица Сообщение (Message)
+table(Сообщение) {
+  primary_key(id)           : int
+  chat_id                   : int «FK»
+  sender_id                 : int «FK»
+  reply_to_id               : int «FK»
+  forwarded_from_id         : int «FK»
+  content                   : text
+  timestamp                 : datetime
+  media_filename            : varchar
+  deleted_for_all           : bool
+}
+Чат         ||--o{ Сообщение   : содержит
+Пользователь||--o{ Сообщение   : отправляет
+
+' Таблица Задача (Task)
+table(Задача) {
+  primary_key(id)           : int
+  user_id                   : int «FK»
+  title                     : varchar
+  description               : text
+  due_date                  : date
+  created_at                : datetime
+}
+Пользователь ||--o{ Задача       : создаёт
+
+' Таблица Реакция (Reaction)
+table(Реакция) {
+  primary_key(id)           : int
+  message_id                : int «FK»
+  user_id                   : int «FK»
+  reaction                  : varchar
+}
+Сообщение  ||--o{ Реакция      : содержит
+Пользователь||--o{ Реакция      : ставит
+
+' Таблица ПрограммноеПО (Software)
+table(ПрограммноеПО) {
+  primary_key(id)           : int
+  title                     : varchar
+  description               : text
+  image_url                 : varchar
+  github_url                : varchar
+}
+
+' Таблица Дружба (Friendship)
+table(Дружба) {
+  primary_key(id)           : int
+  requester_id              : int «FK»
+  receiver_id               : int «FK»
+  status                    : varchar
+}
+Пользователь||--o{ Дружба      : инициирует
+Пользователь||--o{ Дружба      : получает
+
+' Таблица УдалённоеСообщение (DeletedMessage)
+table(УдалённоеСообщение) {
+  primary_key(id)           : int
+  message_id                : int «FK»
+  user_id                   : int «FK»
+}
+Сообщение  ||--o{ УдалённоеСообщение : отслеживает
+Пользователь||--o{ УдалённоеСообщение : удаляет
+@enduml

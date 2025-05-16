@@ -1,0 +1,39 @@
+@startuml
+' Фон и общие параметры
+skinparam backgroundColor #F9F9F9
+skinparam sequence {
+  ActorBorderColor #4F81BD
+  ActorBackgroundColor #EAF2F8
+  ParticipantBorderColor #4F81BD
+  ParticipantBackgroundColor #FFFFFF
+  ArrowColor #4F81BD
+  LifeLineBorderColor #4F81BD
+  FontName Arial
+  FontSize 12
+}
+
+|Пользователь|
+start
+:Составить сообщение;
+->
+
+|React SPA|
+:POST /api/message;
+->
+
+|Flask API|
+:Проверить JWT;
+if (Авторизован?) then (нет)
+  :HTTP 401;
+  stop
+else (да)
+  :Записать в БД;
+  ->
+
+:emit 'message:new';
+->
+
+|React SPA|
+:Отобразить сообщение в чате;
+stop
+@enduml

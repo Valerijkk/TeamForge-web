@@ -1,0 +1,38 @@
+@startuml
+' Структура исходного кода
+skinparam backgroundColor #FDFDFD
+skinparam packageStyle folder
+
+skinparam component {
+  FontName Arial
+  FontSize 12
+  BorderColor #4F81BD
+  BackgroundColor #FFFFFF
+}
+
+package "backend" {
+    component "__init__.py" <<file>>
+    package "models" <<folder>>
+    package "routes" <<folder>>
+    package "tests" <<folder>>
+    component "app.py" <<file>>
+    component "config.py" <<file>>
+    component "extensions.py" <<file>>
+    component "models.py" <<file>>
+    component "utils.py" <<file>>
+}
+
+package "frontend" {
+  package "public" <<folder>>
+  package "src" {
+    package "pages" <<folder>>
+    package "tests" <<folder>>
+    component "App.css" <<file>>
+    component "App.jsx" <<file>>
+    component "index.js" <<file>>
+    component "store.js" <<file>>
+  }
+  component "package.json" <<file>>
+  component "package-lock.json" <<file>>
+}
+@enduml

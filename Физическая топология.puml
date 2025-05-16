@@ -1,0 +1,24 @@
+@startuml
+' Фон диаграммы
+skinparam backgroundColor #F9F9F9
+
+' Общие параметры узлов
+skinparam node {
+  BackgroundColor #FFFFFF
+  BorderColor #4F81BD
+  FontName Arial
+  FontSize 12
+}
+
+node "Кластер Kubernetes" {
+  node "frontend-под" {
+    [Nginx]
+  }
+  node "backend-под" {
+    [Flask + Gunicorn]
+  }
+  node "postgres-под" {
+    database "PostgresSQL 16"
+  }
+}
+@enduml

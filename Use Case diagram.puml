@@ -1,16 +1,18 @@
 @startuml usecase-diagram
 left to right direction
-actor User
-actor Admin
+actor Пользователь as User
+actor Администратор as Admin
+
 rectangle TeamForge {
-  (Register / Login) as UC1
-  (Send Message) as UC2
-  (Join Call) as UC3
-  (Manage Tasks) as UC4
-  (Search Knowledge Base) as UC5
-  (Ask AI-Assistant) as UC6
-  (Manage Software Directory) as UC8
+  (Регистрация / Вход) as UC1
+  (Отправка сообщения) as UC2
+  (Присоединение к звонку) as UC3
+  (Управление задачами) as UC4
+  (Поиск в базе знаний) as UC5
+  (Обращение к AI-ассистенту) as UC6
+  (Управление каталогом ПО) as UC8
 }
+
 User --> UC1
 User --> UC2
 User --> UC3

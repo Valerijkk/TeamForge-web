@@ -1,0 +1,26 @@
+@startuml
+package "Клиентский уровень" {
+  [React SPA] <<браузер>>
+}
+
+package "Уровень API" {
+  [Flask REST API] <<фреймворк>>
+  [Шлюз Socket.IO] <<фреймворк>>
+}
+
+package "Медиа уровень" {
+  [Coturn] <<SFU>>
+}
+
+package "Уровень данных" {
+  database "SQLite / PostgresSQL"
+  [Redis Pub/Sub] <<кэш>>
+}
+
+[React SPA] --> [Flask REST API]       : HTTPS + JWT
+[React SPA] --> [Шлюз Socket.IO]      : WebSocket (+fallback)
+[React SPA] --> [Coturn]              : DTLS-SRTP (ICE)
+[Flask REST API] --> "SQLite / PostgresSQL" : SQLAlchemy
+[Шлюз Socket.IO] --> "SQLite / PostgresSQL" : запись в журнале вызовов
+[Шлюз Socket.IO] --> [Redis Pub/Sub] : publish / subscribe
+@enduml
