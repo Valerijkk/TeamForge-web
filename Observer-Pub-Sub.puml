@@ -1,0 +1,23 @@
+@startuml PubSubMessages
+interface Publisher {
+  + publish(event, data)
+}
+
+interface Subscriber {
+  + update(event, data)
+}
+
+class DatabaseService implements Publisher {
+  + commit()
+  + publish(event, data)
+}
+
+class SocketGateway implements Subscriber {
+  + update(event, data)
+  + emit(event, data)
+}
+
+DatabaseService --> Publisher
+SocketGateway --> Subscriber
+DatabaseService -> SocketGateway : publish("receive_message", data)
+@enduml

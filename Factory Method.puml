@@ -1,0 +1,14 @@
+@startuml FactoryApp
+interface IAppFactory {
+  + create_app(config_obj): FlaskApp
+}
+
+class AppFactory implements IAppFactory {
+  + create_app(config_obj): FlaskApp
+}
+
+class FlaskApp
+
+AppFactory ..|> IAppFactory
+AppFactory --> FlaskApp
+@enduml

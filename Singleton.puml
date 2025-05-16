@@ -1,0 +1,15 @@
+@startuml SingletonExtensions
+class SQLAlchemy
+class JWTManager
+class SocketIO
+
+class Extensions {
+  - db: SQLAlchemy
+  - jwt: JWTManager
+  - socketio: SocketIO
+  __static block__
+}
+Extensions --> SQLAlchemy
+Extensions --> JWTManager
+Extensions --> SocketIO
+@enduml
