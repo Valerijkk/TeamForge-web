@@ -3,7 +3,7 @@ from flask_socketio import SocketIO
 from flask_mail import Mail
 from flask_cors import CORS
 
-# Инициализация, но без привязки к Flask-приложению
+# Инициализация
 db       = SQLAlchemy()
 socketio = SocketIO()
 mail     = Mail()
