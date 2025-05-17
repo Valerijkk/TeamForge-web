@@ -151,4 +151,3 @@ docker-compose up --build -d
 ✨ **Онлайн-демо:** [https://Valerijkk.github.io/TeamForge-web](https://Valerijkk.github.io/TeamForge-web)
 © 2025 Valerijkk — Все права защищены.
 
-```
