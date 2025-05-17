@@ -1,0 +1,606 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Flask API",
+    "version": "1.0"
+  },
+  "host": "localhost:5000",
+  "basePath": "/",
+  "schemes": [
+    "http"
+  ],
+  "paths": {
+    "/tasks": {
+      "get": {
+        "tags": [
+          "task_bp"
+        ],
+        "summary": "GET /tasks",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "task_bp"
+        ],
+        "summary": "POST /tasks",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/tasks/<int:task_id>": {
+      "put": {
+        "tags": [
+          "task_bp"
+        ],
+        "summary": "PUT /tasks/<int:task_id>",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "task_bp"
+        ],
+        "summary": "DELETE /tasks/<int:task_id>",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/create_chat": {
+      "post": {
+        "tags": [
+          "chat_bp"
+        ],
+        "summary": "POST /create_chat",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/user_chats/<int:user_id>": {
+      "get": {
+        "tags": [
+          "chat_bp"
+        ],
+        "summary": "GET /user_chats/<int:user_id>",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/messages/<int:chat_id>": {
+      "get": {
+        "tags": [
+          "chat_bp"
+        ],
+        "summary": "GET /messages/<int:chat_id>",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/upload": {
+      "post": {
+        "tags": [
+          "chat_bp"
+        ],
+        "summary": "POST /upload",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/messages/<int:message_id>": {
+      "delete": {
+        "tags": [
+          "chat_bp"
+        ],
+        "summary": "DELETE /messages/<int:message_id>",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/forward_message": {
+      "post": {
+        "tags": [
+          "chat_bp"
+        ],
+        "summary": "POST /forward_message",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/chat/<int:chat_id>": {
+      "get": {
+        "tags": [
+          "chat_bp"
+        ],
+        "summary": "GET /chat/<int:chat_id>",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/software": {
+      "get": {
+        "tags": [
+          "software_bp"
+        ],
+        "summary": "GET /software",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "software_bp"
+        ],
+        "summary": "POST /software",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/software/<int:software_id>": {
+      "put": {
+        "tags": [
+          "software_bp"
+        ],
+        "summary": "PUT /software/<int:software_id>",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "software_bp"
+        ],
+        "summary": "DELETE /software/<int:software_id>",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "tags": [
+          "user_bp"
+        ],
+        "summary": "GET /users",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/profile_data/<int:user_id>": {
+      "get": {
+        "tags": [
+          "user_bp"
+        ],
+        "summary": "GET /profile_data/<int:user_id>",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/friend_request": {
+      "post": {
+        "tags": [
+          "friendship_bp"
+        ],
+        "summary": "POST /friend_request",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/friend_requests/<int:user_id>": {
+      "get": {
+        "tags": [
+          "friendship_bp"
+        ],
+        "summary": "GET /friend_requests/<int:user_id>",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/friend_request/confirm": {
+      "post": {
+        "tags": [
+          "friendship_bp"
+        ],
+        "summary": "POST /friend_request/confirm",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/friend_request/reject": {
+      "post": {
+        "tags": [
+          "friendship_bp"
+        ],
+        "summary": "POST /friend_request/reject",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/friends/<int:user_id>": {
+      "get": {
+        "tags": [
+          "friendship_bp"
+        ],
+        "summary": "GET /friends/<int:user_id>",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/friendship": {
+      "delete": {
+        "tags": [
+          "friendship_bp"
+        ],
+        "summary": "DELETE /friendship",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/search_users": {
+      "get": {
+        "tags": [
+          "friendship_bp"
+        ],
+        "summary": "GET /search_users",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/register": {
+      "post": {
+        "tags": [
+          "auth_bp"
+        ],
+        "summary": "POST /register",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/login": {
+      "post": {
+        "tags": [
+          "auth_bp"
+        ],
+        "summary": "POST /login",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/reset-password": {
+      "post": {
+        "tags": [
+          "auth_bp"
+        ],
+        "summary": "POST /reset-password",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/reset-password-confirm/<token>": {
+      "post": {
+        "tags": [
+          "auth_bp"
+        ],
+        "summary": "POST /reset-password-confirm/<token>",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/call_history": {
+      "post": {
+        "tags": [
+          "call_bp"
+        ],
+        "summary": "POST /call_history",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/call_history/<int:user_id>": {
+      "get": {
+        "tags": [
+          "call_bp"
+        ],
+        "summary": "GET /call_history/<int:user_id>",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    }
+  }
+}
