@@ -1,0 +1,81 @@
+@startuml
+'──────────  Основные классы TeamForge  ──────────
+skinparam class {
+  BackgroundColor #F8FBFF
+  BorderColor     #004B87
+  AttributeIconSize 0     '— убираем «пакетные» ручки
+  FontName "Times New Roman"
+}
+left to right direction
+'────── классы ──────
+class User {
+  +id : int
+  +username : str
+  +email : str
+  +password_hash : str
+}
+class Chat {
+  +id : int
+  +name : str
+  +is_group : bool
+}
+class ChatUser {
+  +id : int
+  +notifications_enabled : bool
+}
+class Message {
+  +id : int
+  +content : Text
+  +timestamp : datetime
+  +media_filename : str
+  +deleted_for_all : bool
+}
+class Reaction {
+  +id : int
+  +reaction : str
+}
+class DeletedMessage {
+  +id : int
+}
+class Friendship {
+  +id : int
+  +status : str
+}
+class CallHistory {
+  +id : int
+  +call_type : str
+  +participants : str
+  +start_time : datetime
+  +end_time : datetime
+  +duration : int
+}
+class Task {
+  +id : int
+  +title : str
+  +description : Text
+  +due_date : date
+  +created_at : datetime
+}
+class Software {
+  +id : int
+  +title : str
+  +description : Text
+  +image_url : str
+  +github_url : str
+}
+'────── связи ──────
+User  "1" -- "*" ChatUser
+Chat  "1" -- "*" ChatUser
+Chat  "1" -- "*" Message
+User  "1" -- "*" Message : sender
+User  "0..*" -- "1" Message : forwarded_from
+Message "1" -- "*" Reaction
+User    "1" -- "*" Reaction
+Message "1" -- "*" DeletedMessage
+User    "1" -- "*" DeletedMessage
+User "1" -- "*" Friendship : requester
+User "1" -- "*" Friendship : receiver
+User "1" -- "*" CallHistory : caller
+User "1" -- "*" Task : owner
+User "1" -- "*" Software : owner
+@enduml

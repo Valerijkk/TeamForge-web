@@ -1,0 +1,43 @@
+@startuml
+'──────────  Состояния Web-соединения  ──────────
+skinparam state {
+  BackgroundColor #EEF2FA
+  BorderColor     #2E3A87
+  RoundCorner     15
+  FontName        "Times New Roman"
+}
+
+[*] --> Disconnected : старт
+Disconnected --> Connecting : initWebSocket()
+Connecting --> Error  : тайм-аут
+Error --> Connecting  : retry()
+Connecting --> Authenticated : JWT OK
+
+'─ супер-состояние Idle
+state Idle {
+  [*] --> Idle
+}
+Authenticated --> Idle
+
+'─ супер-состояние Chat
+state "In Chat" as Chat {
+  [*] --> ChatActive
+  ChatActive --> Editing : editMessage()
+  Editing --> ChatActive : save()
+}
+Idle --> Chat
+Authenticated --> Chat
+
+'─ супер-состояние Call
+state "In Call" as Call {
+  state Talking {
+    [*] --> Talking
+    Talking --> Muted        : muteMic()
+    Muted --> Talking        : unmuteMic()
+    Talking --> Sharing      : shareScreen()
+    Sharing --> Talking      : stopShare()
+  }
+}
+Idle --> Call
+Authenticated --> Call
+@enduml
