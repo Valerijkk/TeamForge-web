@@ -1,10 +1,12 @@
 @startuml usecase-diagram
 left to right direction
-actor Пользователь as User
+actor Не_авторизированный_пользователь as User1
+actor Авторизованный_Пользователь as User
 actor Администратор as Admin
 
 rectangle TeamForge {
-  (Регистрация / Вход) as UC1
+  (Регистрация) as UC1
+  (Вход) as UC9
   (Отправка сообщения) as UC2
   (Присоединение к звонку) as UC3
   (Управление задачами) as UC4
@@ -13,11 +15,12 @@ rectangle TeamForge {
   (Управление каталогом ПО) as UC8
 }
 
-User --> UC1
-User --> UC2
-User --> UC3
-User --> UC4
-User --> UC5
-User --> UC6
-Admin --> UC8
+User -- UC2
+User -- UC3
+User -- UC4
+User -- UC5
+User -- UC6
+Admin -- UC8
+User1 -- UC1
+User1 -- UC9
 @enduml
