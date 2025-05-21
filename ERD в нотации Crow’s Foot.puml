@@ -16,89 +16,102 @@ skinparam class {
 ' Таблица Пользователь
 table(Пользователь) {
   primary_key(id): int
-  username       : varchar
-  email          : varchar
-  password_hash  : varchar
+  username       : varchar(80)
+  email          : varchar(120)
+  password_hash  : varchar(255)
 }
 
 ' Таблица Чат
 table(Чат) {
   primary_key(id): int
-  name           : varchar
+  name           : varchar(80)
   is_group       : bool
 }
 
 ' Таблица УчастникЧата (ChatUser)
 table(УчастникЧата) {
   primary_key(id)            : int
-  chat_id                    : int «FK»
-  user_id                    : int «FK»
+  chat_id                    : int «FK → Чат»
+  user_id                    : int «FK → Пользователь»
   notifications_enabled      : bool
 }
-Пользователь ||--o{ УчастникЧата : участвует
-Чат         ||--o{ УчастникЧата : содержит
+Пользователь ||--o{ УчастникЧата : "участвует (1..*)"
+Чат         ||--o{ УчастникЧата : "содержит (1..*)"
 
 ' Таблица Сообщение (Message)
 table(Сообщение) {
   primary_key(id)           : int
-  chat_id                   : int «FK»
-  sender_id                 : int «FK»
-  reply_to_id               : int «FK»
-  forwarded_from_id         : int «FK»
+  chat_id                   : int «FK → Чат»
+  sender_id                 : int «FK → Пользователь»
+  reply_to_id               : int «FK → Сообщение?»
+  forwarded_from_id         : int «FK → Пользователь?»
   content                   : text
   timestamp                 : datetime
-  media_filename            : varchar
+  media_filename            : varchar(120)
   deleted_for_all           : bool
 }
-Чат         ||--o{ Сообщение   : содержит
-Пользователь||--o{ Сообщение   : отправляет
+Чат         ||--o{ Сообщение   : "содержит (1..*)"
+Пользователь||--o{ Сообщение   : "отправляет (1..*)"
+Сообщение   }o--|| Пользователь : "переслано от (0..1)"
 
 ' Таблица Задача (Task)
 table(Задача) {
   primary_key(id)           : int
-  user_id                   : int «FK»
-  title                     : varchar
+  user_id                   : int «FK → Пользователь»
+  title                     : varchar(120)
   description               : text
   due_date                  : date
   created_at                : datetime
 }
-Пользователь ||--o{ Задача       : создаёт
+Пользователь ||--o{ Задача : "создает (1..*)"
 
 ' Таблица Реакция (Reaction)
 table(Реакция) {
   primary_key(id)           : int
-  message_id                : int «FK»
-  user_id                   : int «FK»
-  reaction                  : varchar
+  message_id                : int «FK → Сообщение»
+  user_id                   : int «FK → Пользователь»
+  reaction                  : varchar(20)
 }
-Сообщение  ||--o{ Реакция      : содержит
-Пользователь||--o{ Реакция      : ставит
+Сообщение  ||--o{ Реакция : "имеет (1..*)"
+Пользователь||--o{ Реакция : "ставит (1..*)"
 
-' Таблица ПрограммноеПО (Software)
-table(ПрограммноеПО) {
+' Таблица ИсторияЗвонков (CallHistory)
+table(ИсторияЗвонков) {
   primary_key(id)           : int
-  title                     : varchar
-  description               : text
-  image_url                 : varchar
-  github_url                : varchar
+  caller_id                 : int «FK → Пользователь»
+  call_type                 : varchar(20)
+  participants              : varchar(200)
+  start_time                : datetime
+  end_time                  : datetime
+  duration                  : int
 }
+Пользователь ||--o{ ИсторияЗвонков : "инициирует (1..*)"
 
 ' Таблица Дружба (Friendship)
 table(Дружба) {
   primary_key(id)           : int
-  requester_id              : int «FK»
-  receiver_id               : int «FK»
-  status                    : varchar
+  requester_id              : int «FK → Пользователь»
+  receiver_id               : int «FK → Пользователь»
+  status                    : varchar(20)
 }
-Пользователь||--o{ Дружба      : инициирует
-Пользователь||--o{ Дружба      : получает
+Пользователь||--o{ Дружба : "запрашивает (1..*)"
+Пользователь||--o{ Дружба : "получает (1..*)"
 
 ' Таблица УдалённоеСообщение (DeletedMessage)
 table(УдалённоеСообщение) {
   primary_key(id)           : int
-  message_id                : int «FK»
-  user_id                   : int «FK»
+  message_id                : int «FK → Сообщение»
+  user_id                   : int «FK → Пользователь»
 }
-Сообщение  ||--o{ УдалённоеСообщение : отслеживает
-Пользователь||--o{ УдалённоеСообщение : удаляет
+Сообщение  ||--o{ УдалённоеСообщение : "отслеживает (1..*)"
+Пользователь||--o{ УдалённоеСообщение : "удаляет (1..*)"
+
+' Таблица ПрограммноеПО (Software)
+table(ПрограммноеПО) {
+  primary_key(id)           : int
+  title                     : varchar(120)
+  description               : text
+  image_url                 : varchar(255)
+  github_url                : varchar(255)
+}
 @enduml

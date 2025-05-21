@@ -3,10 +3,11 @@
 skinparam class {
   BackgroundColor #F8FBFF
   BorderColor     #004B87
-  AttributeIconSize 0     '— убираем «пакетные» ручки
+  AttributeIconSize 0
   FontName "Times New Roman"
 }
 left to right direction
+
 '────── классы ──────
 class User {
   +id : int
@@ -14,33 +15,42 @@ class User {
   +email : str
   +password_hash : str
 }
+
 class Chat {
   +id : int
   +name : str
   +is_group : bool
 }
+
 class ChatUser {
   +id : int
   +notifications_enabled : bool
 }
+
 class Message {
   +id : int
   +content : Text
   +timestamp : datetime
   +media_filename : str
   +deleted_for_all : bool
+  +reply_to_id : int
+  +forwarded_from_id : int
 }
+
 class Reaction {
   +id : int
   +reaction : str
 }
+
 class DeletedMessage {
   +id : int
 }
+
 class Friendship {
   +id : int
   +status : str
 }
+
 class CallHistory {
   +id : int
   +call_type : str
@@ -49,6 +59,7 @@ class CallHistory {
   +end_time : datetime
   +duration : int
 }
+
 class Task {
   +id : int
   +title : str
@@ -56,6 +67,7 @@ class Task {
   +due_date : date
   +created_at : datetime
 }
+
 class Software {
   +id : int
   +title : str
@@ -63,19 +75,27 @@ class Software {
   +image_url : str
   +github_url : str
 }
+
 '────── связи ──────
-User  "1" -- "*" ChatUser
-Chat  "1" -- "*" ChatUser
-Chat  "1" -- "*" Message
-User  "1" -- "*" Message : sender
-User  "0..*" -- "1" Message : forwarded_from
+User "1" -- "*" ChatUser
+Chat "1" -- "*" ChatUser
+
+Chat "1" -- "*" Message
+User "1" -- "*" Message : sender
+
+
+User "0..1" -- "*" Message : forwarded_from
+
 Message "1" -- "*" Reaction
-User    "1" -- "*" Reaction
+User "1" -- "*" Reaction
+
 Message "1" -- "*" DeletedMessage
-User    "1" -- "*" DeletedMessage
+User "1" -- "*" DeletedMessage
+
 User "1" -- "*" Friendship : requester
 User "1" -- "*" Friendship : receiver
+
 User "1" -- "*" CallHistory : caller
 User "1" -- "*" Task : owner
-User "1" -- "*" Software : owner
+
 @enduml
