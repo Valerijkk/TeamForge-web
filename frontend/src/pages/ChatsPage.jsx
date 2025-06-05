@@ -99,6 +99,29 @@ function ChatsPage({ user }) {
         navigate(`/chat/${chat.id}`);
     };
 
+    /* ====== ДОБАВЛЕНО: удаление чата ====== */
+    const deleteChat = async (chat, e) => {
+        e.stopPropagation(); // чтобы клик по корзине не открыл чат
+        if (!window.confirm(`Удалить чат «${chat.name}»?`)) return;
+
+        try {
+            const res = await fetch(
+                `http://localhost:5000/chat/${chat.id}?user_id=${user.id}`,
+                { method: 'DELETE' }
+            );
+            const data = await res.json();
+            if (data.status === 'success') {
+                // Убираем чат из локального состояния
+                setChats(prev => prev.filter(c => c.id !== chat.id));
+            } else {
+                alert(data.message);
+            }
+        } catch (err) {
+            console.error('Ошибка удаления чата:', err);
+        }
+    };
+    /* ====================================== */
+
     return (
         <div className="container chats-container">
             <h2>Ваши чаты</h2>
@@ -108,7 +131,17 @@ function ChatsPage({ user }) {
                 <ul className="chat-list">
                     {chats.map(chat => (
                         <li key={chat.id} onClick={() => openChat(chat)}>
+                            {/* имя чата слева */}
                             {chat.name}
+
+                            {/* кнопка-корзина справа */}
+                            <button
+                                className="delete-chat-btn"
+                                title="Удалить чат"
+                                onClick={(e) => deleteChat(chat, e)}
+                            >
+                                🗑️
+                            </button>
                         </li>
                     ))}
                 </ul>

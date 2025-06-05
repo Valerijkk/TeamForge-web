@@ -32,6 +32,6 @@ class Config:
     MAIL_PORT = 465
     MAIL_USE_SSL = True
     MAIL_USE_TLS = False
-    MAIL_USERNAME = 'valerich.tv.88@mail.ru'  # Логин почты
-    MAIL_PASSWORD = 'nM2bxy56cby8TwA4cx3E'  # Пароль почты
-    MAIL_DEFAULT_SENDER = 'valerich.tv.88@mail.ru'  # Отправитель по умолчанию
+    MAIL_USERNAME = ''  # Логин почты
+    MAIL_PASSWORD = ''  # Пароль почты
+    MAIL_DEFAULT_SENDER = ''  # Отправитель по умолчанию

@@ -1,6 +1,6 @@
 import os
 from flask import Blueprint, request, jsonify, send_from_directory
-from ..models import Chat, ChatUser, Message, DeletedMessage
+from ..models import Chat, ChatUser, Message, DeletedMessage, Reaction
 from ..extensions import db, socketio
 
 # Создаём blueprint
@@ -26,6 +26,38 @@ def create_chat():
         db.session.add(chat_user)
     db.session.commit()
     return jsonify({'status': 'success', 'chat_id': chat.id})
+
+# DELETE /chat/<chat_id>?user_id=<current_user>
+@chat_bp.route('/chat/<int:chat_id>', methods=['DELETE'])
+def delete_chat(chat_id):
+    user_id = request.args.get('user_id', type=int)
+    if not user_id:
+        return jsonify({'status': 'fail', 'message': 'Не указан user_id'}), 400
+
+    chat = Chat.query.get(chat_id)
+    if not chat:
+        return jsonify({'status': 'fail', 'message': 'Чат не найден'}), 404
+
+    # 1) разрешаем удалять только участнику (или автору/админу, если нужен жёсткий контроль)
+    is_member = ChatUser.query.filter_by(chat_id=chat_id, user_id=user_id).first()
+    if not is_member:
+        return jsonify({'status': 'fail', 'message': 'Нет прав удалять этот чат'}), 403
+
+    # 2) чистим связанную информацию.
+    #    Если у моделей настроены cascade-delete, двух строчек хватит;
+    #    если нет – вручную удаляем зависимые записи:
+    Reaction.query.join(Message).filter(Message.chat_id == chat_id).delete(synchronize_session=False)
+    DeletedMessage.query.join(Message).filter(Message.chat_id == chat_id).delete(synchronize_session=False)
+    Message.query.filter_by(chat_id=chat_id).delete(synchronize_session=False)
+    ChatUser.query.filter_by(chat_id=chat_id).delete(synchronize_session=False)
+
+    db.session.delete(chat)
+    db.session.commit()
+
+    # 3) уведомляем комнату, чтобы открытые вкладки могли авто-закрыться
+    socketio.emit('chat_deleted', {'chat_id': chat_id}, room=str(chat_id))
+    return jsonify({'status': 'success', 'message': 'Чат удалён'})
+
 
 # Роут получения чатов пользователя
 @chat_bp.route('/user_chats/<int:user_id>', methods=['GET'])
