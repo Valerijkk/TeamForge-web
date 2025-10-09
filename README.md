@@ -1,135 +1,225 @@
-# **TeamForge** — демонстрационное чат-приложение с бекендом на Flask, поддержкой Socket.IO и СУБД PostgreSQL. 
-Проект включает:
-- WebRTC-звонки (голосовые, групповые, демонстрация экрана)  
-- Система задач (календарь)  
-- Сеть «друзей» (запросы, подтверждение, поиск)  
-- CRUD-интерфейс для «программного обеспечения» (для администратора)  
-- Интерактивная база знаний (iframe–статьи)  
-- Страницу ИИ-помощника (интеграция внешнего сервиса)  
+<!-- Banner -->
+<h1 align="center">🧩 TeamForge</h1>
+<p align="center">
+  <b>Демо-чат с бэкендом на Flask, Socket.IO, WebRTC и PostgreSQL</b><br/>
+  Личные/групповые чаты, звонки, задачи, друзья, база знаний и админ-CRUD.
+</p>
 
-## 📋 Содержание
+<p align="center">
+  <!-- Repo meta -->
+  <a href="https://github.com/Valerijkk/TeamForge-web/stargazers"><img src="https://img.shields.io/github/stars/Valerijkk/TeamForge-web?style=flat-square&logo=github" /></a>
+  <a href="https://github.com/Valerijkk/TeamForge-web/issues"><img src="https://img.shields.io/github/issues/Valerijkk/TeamForge-web?style=flat-square" /></a>
+  <a href="https://github.com/Valerijkk/TeamForge-web/network/members"><img src="https://img.shields.io/github/forks/Valerijkk/TeamForge-web?style=flat-square" /></a>
+  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" />
+</p>
 
-1. [Возможности](#-возможности)  
-2. [Структура](#-структура-проекта)  
-3. [Установка и запуск](#-установка-и-запуск)  
-4. [Полезные ссылки](#-полезные-ссылки)  
-5. [Лицензия](#-лицензия)  
+<p align="center">
+  <!-- Tech stack -->
+  <img src="https://img.shields.io/badge/Flask-000?logo=flask&logoColor=white&style=for-the-badge" />
+  <img src="https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB&style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Socket.IO-010101?logo=socketdotio&logoColor=white&style=for-the-badge" />
+  <img src="https://img.shields.io/badge/WebRTC-333?logo=webrtc&logoColor=white&style=for-the-badge" />
+  <img src="https://img.shields.io/badge/PostgreSQL-316192?logo=postgresql&logoColor=white&style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white&style=for-the-badge" />
+</p>
+
+<p align="center">
+  <a href="#-возможности">Возможности</a> •
+  <a href="#-архитектура--скриншоты">Архитектура & Скриншоты</a> •
+  <a href="#-установка-и-запуск">Установка</a> •
+  <a href="#-api-обзор">API</a> •
+  <a href="#-тестирование--qa">Тесты</a> •
+  <a href="#-безопасность">Безопасность</a> •
+  <a href="#-лицензия">Лицензия</a>
+</p>
+
+> ✨ Онлайн-демо: **https://Valerijkk.github.io/TeamForge-web**  
+> 🛠 Репозиторий: **Valerijkk/TeamForge-web**
+
+---
 
 ## 🚀 Возможности
 
-### Пользователи и аутентификация
-- Регистрация/вход с хешированием паролей.  
-- Сброс пароля по email.
+### 👤 Пользователи и аутентификация
+- 🔐 Регистрация/логин, хеширование паролей  
+- ✉️ Сброс пароля по e-mail  
+- 🛡️ JWT-сессии / refresh-токены
 
-### Чаты
-- Личные и групповые чаты.  
-- Текстовые сообщения, файлы, ответы, пересылка, удаление (для всех или только для себя).  
-- Реакции (👍, ❤️ и т.п.).  
-- Поиск по содержимому сообщений.
+### 💬 Чаты
+- 👥 Личные и групповые чаты  
+- 📝 Сообщения, файлы, ответы, пересылка  
+- 🗑 Удаление (для всех / только для себя)  
+- 🔎 Поиск по истории  
+- 😄 Реакции (👍 ❤️ 🔥 …)  
+- 🟢 Индикатор онлайн-статуса и «печатает…»
 
-### Звонки и WebRTC
-- Голосовые звонки (личные/групповые).  
-- Включение/выключение камеры, демонстрация экрана.  
-- Лог звонков (тип, участники, время начала/окончания, длительность).
+### 📞 WebRTC и звонки
+- 📱 Голосовые/групповые  
+- 🖥 Демонстрация экрана  
+- 🧾 Лог звонков (участники, время, длительность)
 
-### Система дружбы
-- Отправка, подтверждение и отклонение запросов в друзья.  
-- Удаление друзей.  
-- Поиск пользователей.
+### 🤝 Система дружбы
+- ➕ Запросы в друзья / подтверждение / отклонение  
+- 🔍 Поиск пользователей  
+- 🗑 Удаление из друзей
 
-### Задачи и календарь
-- Добавление/редактирование/удаление задач с указанием даты.  
-- Просмотр задач на выбранный день и на ближайшую неделю.
+### 🗓 Задачи и календарь
+- ➕/✏️/🗑 CRUD задач  
+- 📅 Просмотр на день и неделю, быстрые фильтры
 
-### Программное обеспечение
-- Страница карточек ПО.  
-- CRUD-операции (только для администратора).
+### 🧰 «Программное обеспечение» (админ)
+- 📦 Каталог карточек ПО  
+- 🛠 Полный CRUD (только для администратора)
 
-### База знаний
-- Интерактивные статьи через `<iframe>`.
+### 📚 База знаний
+- 📖 Интерактивные статьи через `<iframe>`
 
-### ИИ-помощник
-- Встроенный внешний сервис ИИ (iframe).
+### 🤖 ИИ-помощник
+- 🔗 Встроенный внешний сервис (iframe-вью)
 
-## 📂 Структура проекта
+---
+
+## 📦 Архитектура & Скриншоты
 
 ```
 
 teamforge/
-├─ backend/           — Flask-API + Socket.IO
-│  ├─ routes/         — all\_blueprints (auth, chat, call, tasks, software, user, friendship, socketio\_events)
-│  ├─ models.py       — ORM-модели
-│  ├─ extensions.py   — init Flask-extensions
-│  ├─ utils.py        — утилиты (email-сброс, токены)
-│  ├─ app.py          — entry point
-│  ├─ config.py       — настройки
-│  └─ tests/          — pytest-тесты, locust
-├─ frontend/          — React SPA
-│  ├─ public/
+├─ backend/                    # Flask API + Socket.IO
+│  ├─ routes/                  # auth, chat, call, tasks, software, user, friendship, socketio_events
+│  ├─ models.py                # SQLAlchemy ORM
+│  ├─ extensions.py            # init Flask-extensions
+│  ├─ utils.py                 # e-mail reset, tokens, helpers
+│  ├─ app.py                   # app factory/entry
+│  ├─ config.py                # конфиги
+│  └─ tests/                   # pytest, locust
+├─ frontend/                   # React SPA
 │  └─ src/
-│     ├─ pages/       — MainPage, Login, Register, Chats, Chat, Calls, Calendar, Profile, KnowledgeBase, AIAssistant, Software, ResetPassword(Confirm)
-│     ├─ App.jsx      — маршрутизация
-│     └─ setupTests.js, App.test.js, …
-├─ uploads/           — медиа-файлы
+│     ├─ pages/                # Main, Login, Register, Chats, Chat, Calls, Calendar, Profile, KB, AI, Software, ResetPassword(Confirm)
+│     ├─ App.jsx               # маршрутизация
+│     └─ setupTests.js, *.test.js
+├─ uploads/                    # медиа
 ├─ docker-compose.yml
 ├─ Dockerfile.backend
 ├─ Dockerfile.frontend
-├─ README.md         — вы здесь
-└─ teamforge\_erd.puml, UseCase.puml, …
-```
+└─ README.md
+
+````
 
 ## 🛠 Установка и запуск
 
-### 🚚 С Docker
-
+### 🚚 Быстрый старт в Docker
 ```bash
 git clone https://github.com/Valerijkk/TeamForge-web.git
 cd TeamForge-web
 docker-compose up --build -d
-```
-
-* Бекенд будет доступен на `http://localhost:5000`
-* Фронтенд — на `http://localhost:3000`
+# backend → http://localhost:5000
+# frontend → http://localhost:3000
+````
 
 ### ⚙️ Локальная разработка
 
-1. **Бекенд**
+**1) Backend**
 
-   ```bash
-   cd backend
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
-   flask db upgrade      # миграции
-   flask run
-   ```
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
 
-2. **Фронтенд**
+# ENV (пример):
+# export FLASK_ENV=development
+# export DATABASE_URL=postgresql+psycopg2://user:pass@localhost:5432/teamforge
+# export SECRET_KEY=supersecret
+# export MAIL_SERVER=smtp.example.com
+# export MAIL_USERNAME=...
+# export MAIL_PASSWORD=...
 
-   ```bash
-   cd frontend
-   npm install
-   npm start
-   ```
+flask db upgrade            # миграции
+flask run                   # http://localhost:5000
+```
 
-### 🧪 Тесты
+**2) Frontend**
 
-* **Backend**: `pytest backend/tests/`
-* **Frontend**: `npm test` (Jest + React Testing Library)
-* **Нагрузочное**: `locust -f backend/tests/locustfile.py`
+```bash
+cd frontend
+npm install
+npm start                   # http://localhost:3000
+```
+
+---
+
+## 🧪 Тестирование & QA
+
+* **Backend (pytest)**
+
+  ```bash
+  pytest -q backend/tests
+  ```
+* **Frontend (Jest + RTL)**
+
+  ```bash
+  cd frontend && npm test
+  ```
+* **Нагрузочное (Locust)**
+
+  ```bash
+  locust -f backend/tests/locustfile.py
+  ```
+
+## 🔌 API обзор (фрагмент)
+
+| Метод | Путь                      | Описание            |
+| ----: | ------------------------- | ------------------- |
+|  POST | `/api/auth/login`         | Логин, выдача JWT   |
+|  POST | `/api/auth/register`      | Регистрация         |
+|   GET | `/api/users/search?q=`    | Поиск пользователей |
+|   GET | `/api/chats/:id/messages` | История сообщений   |
+|  POST | `/api/messages`           | Отправка сообщения  |
+|  POST | `/api/calls/start`        | Инициация звонка    |
+|   GET | `/api/tasks?date=`        | Задачи на дату      |
+|  CRUD | `/api/software/*`         | Каталог ПО (админ)  |
+
+---
+
+## 🧷 Переменные окружения (пример `.env`)
+
+```dotenv
+FLASK_ENV=development
+SECRET_KEY=supersecret
+DATABASE_URL=postgresql+psycopg2://user:pass@db:5432/teamforge
+MAIL_SERVER=smtp.example.com
+MAIL_PORT=587
+MAIL_USE_TLS=true
+MAIL_USERNAME=your@mail.com
+MAIL_PASSWORD=********
+JWT_SECRET=anothersecret
+```
+
+---
+
+## 🧭 Roadmap
+
+* [ ] Push-уведомления (web & mobile)
+* [ ] История редактирования сообщений
+* [ ] Запись/архив звонков
+* [ ] Роли и права (RBAC) в админке
+* [ ] Мульти-язычность (i18n)
+* [ ] Докер-оркестрация + Nginx SSL
+
+---
+
+## 🛡 Безопасность
+
+* Ответственная публикация уязвимостей приветствуется ❤️
+* См. **[SECURITY.md](SECURITY.md)**
+* E-mail для отчётов: **[valerich.tv.88@mail.ru](mailto:valerich.tv.88@mail.ru)**
+
+---
 
 ## 🔗 Полезные ссылки
 
 * [Flask](https://flask.palletsprojects.com/)
 * [Flask-SocketIO](https://flask-socketio.readthedocs.io/)
-* [React Router DOM](https://reactrouter.com/)
+* [React Router](https://reactrouter.com/)
 * [PostgreSQL](https://www.postgresql.org/)
 * [GitHub Pages](https://pages.github.com/)
-
-## 📄 Лицензия
-
-Проект предназначен для демонстрации.
-Коммерческое использование, модификация или распространение без согласия автора запрещены.
-
-✨ **Онлайн-демо:** [https://Valerijkk.github.io/TeamForge-web](https://Valerijkk.github.io/TeamForge-web)
-© 2025 Valerijkk — Все права защищены.
