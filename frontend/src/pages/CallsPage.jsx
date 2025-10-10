@@ -10,32 +10,32 @@ export default function CallsPage({ user }) {
     const navigate = useNavigate();
 
     /* ------------------------------------------------- Состояние UI */
-    const [callType, setCallType]             = useState('personal');
-    const [allUsers, setAllUsers]             = useState([]);
-    const [selectedUser, setSelectedUser]     = useState('');
-    const [selectedUsers, setSelectedUsers]   = useState([]);
+    const [callType, setCallType]           = useState('personal');
+    const [allUsers, setAllUsers]           = useState([]);
+    const [selectedUser, setSelectedUser]   = useState('');
+    const [selectedUsers, setSelectedUsers] = useState([]);
 
-    const [callActive, setCallActive]         = useState(false);
-    const [callStart, setCallStart]           = useState(null);
-    const [incomingCall, setIncomingCall]     = useState(null);
-    const [participants, setParticipants]     = useState([]);
+    const [callActive, setCallActive]       = useState(false);
+    const [callStart, setCallStart]         = useState(null);
+    const [incomingCall, setIncomingCall]   = useState(null);
+    const [participants, setParticipants]   = useState([]);
 
-    const [micOn, setMicOn]                   = useState(true);
-    const [camOn, setCamOn]                   = useState(false);
-    const [screenOn, setScreenOn]             = useState(false);
+    const [micOn, setMicOn]       = useState(true);
+    const [camOn, setCamOn]       = useState(false);
+    const [screenOn, setScreenOn] = useState(false);
 
     /* -------------------------- локальные медиа-данные и пиры ------------- */
-    const audioOnly          = useMemo(() => ({ audio: true, video: false }), []);
-    const camOnly            = useMemo(() => ({ video: true }), []);
-    const screenVid          = useMemo(() => ({ video: true }), []);
+    const audioOnly  = useMemo(() => ({ audio: true, video: false }), []);
+    const camOnly    = useMemo(() => ({ video: true }), []);
+    const screenVid  = useMemo(() => ({ video: true }), []);
 
-    const localStreamRef     = useRef(null);
-    const camTrackRef        = useRef(null);
-    const screenTrackRef     = useRef(null);
+    const localStreamRef = useRef(null);
+    const camTrackRef    = useRef(null);
+    const screenTrackRef = useRef(null);
 
     // remoteStreams: { peerId: { audio: MediaStreamTrack|null, video: MediaStreamTrack[] } }
     const [remoteStreams, setRemoteStreams] = useState({});
-    const peerConnsRef      = useRef({});
+    const peerConnsRef = useRef({});
 
     const mounted = useRef(true);
     useEffect(() => () => { mounted.current = false; }, []);
@@ -81,6 +81,26 @@ export default function CallsPage({ user }) {
         peerConnsRef.current[peerId] = pc;
         return pc;
     }, [user.id]);
+
+    /* -------------------- завершение и история звонков ------------------------ */
+    const cleanUp = useCallback(() => {
+        Object.values(peerConnsRef.current).forEach(pc => pc.close());
+        peerConnsRef.current = {};
+        localStreamRef.current?.getTracks().forEach(t => t.stop());
+        localStreamRef.current = null;
+        camTrackRef.current = null;
+        screenTrackRef.current = null;
+
+        setRemoteStreams({});
+        setCallActive(false);
+        setMicOn(true);
+        setCamOn(false);
+        setScreenOn(false);
+    }, []);
+
+    const leaveCallSilent = useCallback(() => {
+        cleanUp();
+    }, [cleanUp]);
 
     /* -------------------------- WebSocket-события ------------------------- */
     useEffect(() => {
@@ -213,26 +233,6 @@ export default function CallsPage({ user }) {
             }
         }
     };
-
-    /* -------------------- завершение и история звонков ------------------------ */
-    const cleanUp = useCallback(() => {
-        Object.values(peerConnsRef.current).forEach(pc => pc.close());
-        peerConnsRef.current = {};
-        localStreamRef.current?.getTracks().forEach(t => t.stop());
-        localStreamRef.current = null;
-        camTrackRef.current = null;
-        screenTrackRef.current = null;
-
-        setRemoteStreams({});
-        setCallActive(false);
-        setMicOn(true);
-        setCamOn(false);
-        setScreenOn(false);
-    }, []);
-
-    const leaveCallSilent = useCallback(() => {
-        cleanUp();
-    }, [cleanUp]);
 
     const leaveCall = () => {
         socket.emit('end_call', { from: user.id, targets: participants });
