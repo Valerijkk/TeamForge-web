@@ -1,25 +1,33 @@
 /* eslint-disable */
 import '@testing-library/jest-dom';
 
-// Мокаем react-router-dom (ESM v7) без обращения к внешним переменным
-jest.mock('react-router-dom', () => ({
-    __esModule: true,
-    // Примитивные "обёртки" — просто пропускают детей
-    MemoryRouter: ({ children }) => (children ?? null),
-    BrowserRouter: ({ children }) => (children ?? null),
-    Routes: ({ children }) => (children ?? null),
-    Route: ({ element, children }) => (element ?? children ?? null),
-    Link: ({ children }) => (children ?? null),
-    NavLink: ({ children }) => (children ?? null),
-    Outlet: ({ children }) => (children ?? null),
+// react-router-dom v7 — чистый ESM. Делаем ВИРТУАЛЬНЫЙ мок,
+// чтобы Jest не пытался резолвить реальный пакет.
+jest.mock(
+    'react-router-dom',
+    () => {
+        const mockNavigate = jest.fn();
+        return {
+            __esModule: true,
+            // Простые "пасс-тру" компоненты: возвращают детей/элемент без JSX
+            MemoryRouter: ({ children }) => (children ?? null),
+            BrowserRouter: ({ children }) => (children ?? null),
+            Routes: ({ children }) => (children ?? null),
+            Route: ({ element, children }) => (element ?? children ?? null),
+            Link: ({ children }) => (children ?? null),
+            NavLink: ({ children }) => (children ?? null),
+            Outlet: ({ children }) => (children ?? null),
 
-    // Хуки — простые заглушки
-    useNavigate: () => jest.fn(),
-    useParams: () => ({}),
-    useLocation: () => ({ pathname: '/' }),
-}));
+            // Минимальные заглушки хуков
+            useNavigate: () => mockNavigate,
+            useParams: () => ({}),
+            useLocation: () => ({ pathname: '/' }),
+        };
+    },
+    { virtual: true }
+);
 
-// Мокаем socket.io-client, чтобы тесты не пытались открыть сокеты
+// Отключаем реальные сокеты в тестах
 jest.mock('socket.io-client', () => {
     const createClient = () => ({
         emit: jest.fn(),
