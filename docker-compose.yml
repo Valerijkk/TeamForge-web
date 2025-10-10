@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   postgres:
     image: postgres:16
@@ -21,23 +23,32 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
+    image: myteamforge/backend:latest
     container_name: backend
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      # переменные подхватит Config в backend/config.py
+      # backend/config.py возьмёт эти значения
       - POSTGRES_DB=teamforge
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
+      # Опционально: CORS (на фронт по умолчанию 3000)
+      - CORS_ALLOWED_ORIGINS=http://localhost:3000
+      # Модуль приложения для gunicorn (backend/app.py => backend.app:app)
+      - APP_MODULE=backend.app:app
+      # Прод окружение
+      - FLASK_ENV=production
     volumes:
-      - ./backend/uploads:/app/backend/uploads     # сохраняем файлы наружу
+      # чтобы /uploads жили вне контейнера
+      - ./backend/uploads:/app/backend/uploads
     ports:
       - "5000:5000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/healthz"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:5000/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -46,12 +57,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      args:
+        # В React CRA переменные читаются на этапе билда
+        # код у тебя сейчас хардкодит http://localhost:5000, но оставлю на будущее
+        REACT_APP_API_URL: "http://localhost:5000"
+    image: myteamforge/frontend:latest
     container_name: frontend
+    restart: unless-stopped
     depends_on:
       backend:
         condition: service_healthy
-    environment:
-      - REACT_APP_API_URL=http://backend:5000
     ports:
       - "3000:80"
 
