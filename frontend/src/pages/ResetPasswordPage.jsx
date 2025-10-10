@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
+import {
+    Container,
+    Typography,
+    TextField,
+    Button,
+    Alert,
+    Box,
+} from "@mui/material";
 
 const BASE_URL = process.env.REACT_APP_API_BASE || "http://localhost:5000";
 
@@ -29,39 +37,58 @@ function ResetPasswordPage() {
             });
         } catch (error) {
             console.error("Ошибка при запросе сброса пароля:", error);
-            setResult({ type: "error", text: "Не удалось отправить письмо. Попробуйте позже." });
+            setResult({
+                type: "error",
+                text: "Не удалось отправить письмо. Попробуйте позже.",
+            });
         } finally {
             setSending(false);
         }
     };
 
     return (
-        <div className="container">
-            <h2>Сброс пароля</h2>
-            <div className="form-group">
-                <input
-                    type="email"
-                    placeholder="Введите ваш email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleResetRequest()}
-                    aria-label="Email для восстановления"
-                />
-            </div>
-            <button onClick={handleResetRequest} disabled={sending}>
-                {sending ? "Отправляю…" : "Отправить инструкцию"}
-            </button>
+        <Container maxWidth="xs" sx={{ mt: 8 }}>
+            <Typography variant="h4" gutterBottom>
+                Сброс пароля
+            </Typography>
 
-            {result.text && (
-                <div className={result.type === "error" ? "error-inline" : "success-inline"}>
+            <TextField
+                label="Email"
+                type="email"
+                fullWidth
+                margin="normal"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleResetRequest()}
+                aria-label="Email для восстановления"
+            />
+
+            <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                disabled={sending}
+                sx={{ mt: 2 }}
+                onClick={handleResetRequest}
+            >
+                {sending ? "Отправляю…" : "Отправить инструкцию"}
+            </Button>
+
+            {!!result.text && (
+                <Alert
+                    severity={result.type === "error" ? "error" : "success"}
+                    sx={{ mt: 2 }}
+                >
                     {result.text}
-                </div>
+                </Alert>
             )}
 
-            <p style={{ marginTop: 12 }}>
-                Вернуться к <Link to="/login">Входу</Link>
-            </p>
-        </div>
+            <Box sx={{ mt: 2 }}>
+                <Typography variant="body2">
+                    Вернуться к <RouterLink to="/login">Входу</RouterLink>
+                </Typography>
+            </Box>
+        </Container>
     );
 }
 
