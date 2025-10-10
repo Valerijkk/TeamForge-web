@@ -1,22 +1,19 @@
+// MainPage.jsx
 import React from 'react';
-import './MainPage.css';
+import { Container, Typography, Box, Button } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
 
 function MainPage() {
     return (
-        <div className="main-page">
-            <div className="overlay">
-                {/* Название приложения */}
-                <h1>TeamForge</h1>
-                {/* Описание возможностей чата */}
-                <p>
-                    Чат для программистов — общайтесь, делитесь файлами, создавайте команды и воплощайте идеи!
-                </p>
-                {/* Кнопка перехода на страницу регистрации */}
-                <a href="/register" className="cta-button">
-                    Начать сейчас
-                </a>
-            </div>
-        </div>
+        <Container sx={{ textAlign: 'center', mt: 8 }}>
+            <Typography variant="h2" gutterBottom>TeamForge</Typography>
+            <Typography variant="body1" gutterBottom>
+                Чат для программистов — общайтесь, делитесь файлами, создавайте команды и воплощайте идеи!
+            </Typography>
+            <Button variant="contained" color="primary" size="large" component={RouterLink} to="/register">
+                Начать сейчас
+            </Button>
+        </Container>
     );
 }
 
