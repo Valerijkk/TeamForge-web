@@ -1,30 +1,24 @@
+// ResetPasswordConfirmPage.jsx
 import React, { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
+import { Container, Typography, TextField, Button, Box } from '@mui/material';
 
-// Компонент страницы для подтверждения сброса пароля
 function ResetPasswordConfirmPage() {
-    // Получаем токен из URL-параметров
     const { token } = useParams();
-    // Хук для программной навигации
     const navigate = useNavigate();
-    // Состояния для ввода нового пароля и его подтверждения
     const [password, setPassword] = useState('');
     const [passwordConfirm, setPasswordConfirm] = useState('');
 
-    // Обработка отправки нового пароля на сервер
     const handlePasswordReset = async () => {
-        // Проверяем, что оба поля заполнены
         if (!password || !passwordConfirm) {
             console.error('Введите пароль и подтверждение');
             return;
         }
-        // Проверяем, что пароли совпадают
         if (password !== passwordConfirm) {
             console.error('Пароли не совпадают');
             return;
         }
         try {
-            // Отправляем POST-запрос с токеном и паролями
             const res = await fetch(`http://localhost:5000/reset-password-confirm/${token}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -32,7 +26,6 @@ function ResetPasswordConfirmPage() {
             });
             const data = await res.json();
             console.log(data.message);
-            // После успешного сброса перенаправляем пользователя на страницу входа
             navigate('/login');
         } catch (error) {
             console.error('Ошибка сброса пароля:', error);
@@ -40,37 +33,39 @@ function ResetPasswordConfirmPage() {
     };
 
     return (
-        <div className="container">
-            <h2>Подтверждение сброса пароля</h2>
-
-            {/* Поле для ввода нового пароля */}
-            <div className="form-group">
-                <input
+        <Container maxWidth="xs" sx={{ mt: 8 }}>
+            <Typography variant="h4" gutterBottom>Подтверждение сброса пароля</Typography>
+            <Box sx={{ mt: 2 }}>
+                <TextField
+                    label="Новый пароль"
                     type="password"
-                    placeholder="Новый пароль"
+                    fullWidth
+                    margin="normal"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                 />
-            </div>
-
-            {/* Поле для подтверждения пароля */}
-            <div className="form-group">
-                <input
+                <TextField
+                    label="Подтверждение пароля"
                     type="password"
-                    placeholder="Подтверждение пароля"
+                    fullWidth
+                    margin="normal"
                     value={passwordConfirm}
                     onChange={(e) => setPasswordConfirm(e.target.value)}
                 />
-            </div>
-
-            {/* Кнопка отправки запроса на сброс */}
-            <button onClick={handlePasswordReset}>Сбросить пароль</button>
-
-            {/* Ссылка для возврата на страницу входа */}
-            <p>
-                Вернуться к <Link to="/login">Входу</Link>
-            </p>
-        </div>
+                <Button
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    sx={{ mt: 2 }}
+                    onClick={handlePasswordReset}
+                >
+                    Сбросить пароль
+                </Button>
+                <Typography sx={{ mt: 2 }}>
+                    Вернуться к <RouterLink to="/login">входу</RouterLink>
+                </Typography>
+            </Box>
+        </Container>
     );
 }
 
