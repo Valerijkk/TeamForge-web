@@ -1,180 +1,117 @@
+// ChatsPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './ChatsPage.css';
+import { Container, Typography, List, ListItem, ListItemText, IconButton, TextField, FormControlLabel, Checkbox, Divider, Button, Box } from '@mui/material';
+import { Delete } from '@mui/icons-material';
 
 function ChatsPage({ user }) {
-    // Состояние: список чатов, все друзья и выбранные участники
     const [chats, setChats] = useState([]);
     const [allFriends, setAllFriends] = useState([]);
     const [selected, setSelected] = useState([]);
     const [chatName, setChatName] = useState('');
     const navigate = useNavigate();
 
-    // Функция для очистки потенциально опасного ввода
-    function sanitizeInput(value) {
-        const forbiddenSQLPatterns = /drop\s+table|delete\s+from|truncate\s+table|update\s+.*\s+set|insert\s+into|select\s+.*\s+from/gi;
-        let cleaned = value.replace(forbiddenSQLPatterns, '');
-        cleaned = cleaned.replace(/<[^>]*>/g, '');
-        cleaned = cleaned.slice(0, 100);
-        return cleaned.trim();
-    }
-
-    // Загрузка чатов пользователя и списка друзей при монтировании
     useEffect(() => {
         if (!user) {
             navigate('/');
             return;
         }
         let isMounted = true;
-
-        // Получаем чаты
         fetch(`http://localhost:5000/user_chats/${user.id}`)
             .then(res => res.json())
-            .then(data => {
-                if (isMounted) {
-                    setChats(data);
-                }
-            })
-            .catch(err => console.error(err));
-
-        // Получаем друзей
+            .then(data => { if (isMounted) setChats(data); })
+            .catch(console.error);
         fetch(`http://localhost:5000/friends/${user.id}`)
             .then(res => res.json())
-            .then(data => {
-                if (isMounted) {
-                    setAllFriends(data);
-                }
-            })
-            .catch(err => console.error(err));
-
-        return () => {
-            isMounted = false;
-        };
+            .then(data => { if (isMounted) setAllFriends(data); })
+            .catch(console.error);
+        return () => { isMounted = false; };
     }, [user, navigate]);
 
-    // Переключение включения/отключения пользователя в списке участников
     const toggleSelect = (u) => {
-        if (selected.find(s => s.id === u.id)) {
-            setSelected(selected.filter(s => s.id !== u.id));
+        if (selected.includes(u.id)) {
+            setSelected(selected.filter(id => id !== u.id));
         } else {
-            setSelected([...selected, u]);
+            setSelected([...selected, u.id]);
         }
     };
 
-    // Создание нового группового чата
     const createChat = async () => {
-        const safeName = sanitizeInput(chatName);
+        const safeName = chatName.trim();
         if (!safeName || selected.length === 0) {
             alert('Укажите название чата и выберите участников.');
             return;
         }
-        const userIds = selected.map(u => u.id);
-
-        try {
-            const res = await fetch('http://localhost:5000/create_chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: safeName,
-                    user_ids: userIds,
-                    creator_id: user.id
-                })
-            });
-            const data = await res.json();
-            if (data.status === 'success') {
-                // Добавляем новый чат в список и переходим в него
-                const newChat = { id: data.chat_id, name: safeName, is_group: true };
-                setChats(prev => [...prev, newChat]);
-                navigate(`/chat/${newChat.id}`);
-            } else {
-                alert(data.message);
-            }
-        } catch (error) {
-            console.error('Ошибка создания чата:', error);
+        const res = await fetch('http://localhost:5000/create_chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: safeName, user_ids: selected, creator_id: user.id })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            const newChat = { id: data.chat_id, name: safeName, is_group: true };
+            setChats(prev => [...prev, newChat]);
+            navigate(`/chat/${newChat.id}`);
+        } else {
+            alert(data.message);
         }
     };
 
-    // Переход в выбранный чат
     const openChat = (chat) => {
         navigate(`/chat/${chat.id}`);
     };
 
-    /* ====== ДОБАВЛЕНО: удаление чата ====== */
     const deleteChat = async (chat, e) => {
-        e.stopPropagation(); // чтобы клик по корзине не открыл чат
+        e.stopPropagation();
         if (!window.confirm(`Удалить чат «${chat.name}»?`)) return;
-
-        try {
-            const res = await fetch(
-                `http://localhost:5000/chat/${chat.id}?user_id=${user.id}`,
-                { method: 'DELETE' }
-            );
-            const data = await res.json();
-            if (data.status === 'success') {
-                // Убираем чат из локального состояния
-                setChats(prev => prev.filter(c => c.id !== chat.id));
-            } else {
-                alert(data.message);
-            }
-        } catch (err) {
-            console.error('Ошибка удаления чата:', err);
+        const res = await fetch(`http://localhost:5000/chat/${chat.id}?user_id=${user.id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.status === 'success') {
+            setChats(prev => prev.filter(c => c.id !== chat.id));
+        } else {
+            alert(data.message);
         }
     };
-    /* ====================================== */
 
     return (
-        <div className="container chats-container">
-            <h2>Ваши чаты</h2>
+        <Container sx={{ mt: 4 }}>
+            <Typography variant="h4" gutterBottom>Ваши чаты</Typography>
             {chats.length === 0 ? (
-                <p>У вас пока нет ни одного чата.</p>
+                <Typography>У вас пока нет ни одного чата.</Typography>
             ) : (
-                <ul className="chat-list">
+                <List>
                     {chats.map(chat => (
-                        <li key={chat.id} onClick={() => openChat(chat)}>
-                            {/* имя чата слева */}
-                            {chat.name}
-
-                            {/* кнопка-корзина справа */}
-                            <button
-                                className="delete-chat-btn"
-                                title="Удалить чат"
-                                onClick={(e) => deleteChat(chat, e)}
-                            >
-                                🗑️
-                            </button>
-                        </li>
+                        <ListItem key={chat.id} button onClick={() => openChat(chat)}>
+                            <ListItemText primary={chat.name} />
+                            <IconButton edge="end" onClick={(e) => deleteChat(chat, e)}>
+                                <Delete />
+                            </IconButton>
+                        </ListItem>
                     ))}
-                </ul>
+                </List>
             )}
-
-            <hr />
-
-            <h3>Создать групповой чат</h3>
-            <div className="form-group">
-                <input
-                    type="text"
-                    placeholder="Название чата"
-                    value={chatName}
-                    onChange={e => setChatName(e.target.value)}
-                />
-            </div>
-
-            <h4>Выберите участников (ваших друзей):</h4>
-            <div className="select-users">
+            <Divider sx={{ my: 3 }} />
+            <Typography variant="h5" gutterBottom>Создать групповой чат</Typography>
+            <TextField
+                fullWidth
+                placeholder="Название чата"
+                value={chatName}
+                onChange={e => setChatName(e.target.value)}
+            />
+            <Typography sx={{ mt: 2 }}>Выберите участников (ваших друзей):</Typography>
+            <Box>
                 {allFriends.map(u => (
-                    <label key={u.id} className="user-checkbox">
-                        <input
-                            type="checkbox"
-                            checked={!!selected.find(s => s.id === u.id)}
-                            onChange={() => toggleSelect(u)}
-                        />
-                        {u.username}
-                    </label>
+                    <FormControlLabel
+                        key={u.id}
+                        control={<Checkbox checked={selected.includes(u.id)} onChange={() => toggleSelect(u)} />}
+                        label={u.username}
+                    />
                 ))}
-            </div>
-
-            <button onClick={createChat} className="create-chat-btn">Создать чат</button>
-        </div>
+            </Box>
+            <Button variant="contained" color="primary" sx={{ mt: 2 }} onClick={createChat}>
+                Создать чат
+            </Button>
+        </Container>
     );
 }
 
