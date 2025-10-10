@@ -1,42 +1,53 @@
-// frontend/src/setupTests.js
+// src/setupTests.js
 import '@testing-library/jest-dom';
 
-// Мокаем react-router-dom (ESM в v7 может не перевариваться Jest'ом в CRA)
-jest.mock('react-router-dom', () => {
-    const React = require('react');
-    return {
+const React = require('react');
+
+/**
+ * Мокаем react-router-dom как "виртуальный" модуль,
+ * чтобы Jest не пытался его резолвить (ESM в v7 ломает CRA/Jest).
+ */
+jest.mock(
+    'react-router-dom',
+    () => ({
         __esModule: true,
-        // Простейшие заглушки, достаточные для твоих тестов
         MemoryRouter: ({ children }) => React.createElement('div', { 'data-testid': 'memory-router' }, children),
+        BrowserRouter: ({ children }) => React.createElement('div', { 'data-testid': 'browser-router' }, children),
         Routes: ({ children }) => React.createElement('div', { 'data-testid': 'routes' }, children),
         Route: ({ element, children }) => element ?? children ?? null,
         Link: ({ to, children, ...rest }) =>
             React.createElement('a', { href: typeof to === 'string' ? to : '#', ...rest }, children),
         NavLink: ({ to, children, ...rest }) =>
-            React.createElement('a', { href: typeof to === 'string' ? to : '#', ...rest }, children),
+            React.createElement('a', { href: typeof to === 'string' ? to : '#', 'data-navlink': true, ...rest }, children),
+        Navigate: ({ to }) => React.createElement('span', { 'data-navigate-to': String(to) }),
         Outlet: ({ children }) => React.createElement('div', null, children),
         useNavigate: () => () => {},
         useParams: () => ({}),
         useLocation: () => ({ pathname: '/' }),
         useSearchParams: () => [new URLSearchParams(), () => {}],
-    };
-});
+        createSearchParams: (obj) => new URLSearchParams(obj),
+    }),
+    { virtual: true }
+);
 
-// Мокаем socket.io-client, чтобы тесты не коннектились в реальный сокет
-jest.mock('socket.io-client', () => {
-    return () => ({
+/** Глушим socket.io-client, чтобы тесты не стучались в реальный сокет */
+jest.mock(
+    'socket.io-client',
+    () => () => ({
         on: jest.fn(),
         emit: jest.fn(),
         off: jest.fn(),
         removeAllListeners: jest.fn(),
-    });
-});
+    }),
+    { virtual: true }
+);
 
-// Мокаем react-calendar, чтобы всегда был элемент с role="grid" (закрывает падение CalendarPage теста без логина)
-jest.mock('react-calendar', () => {
-    const React = require('react');
-    return {
+/** Мокаем react-calendar: всегда рисуем элемент с role="grid" */
+jest.mock(
+    'react-calendar',
+    () => ({
         __esModule: true,
         default: (props) => React.createElement('div', { role: 'grid', className: 'react-calendar', ...props }),
-    };
-});
+    }),
+    { virtual: true }
+);
