@@ -1,8 +1,11 @@
-// src/pages/CallsPage.jsx
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import io from "socket.io-client";
-import "./CallsPage.css";
+// CallsPage.jsx
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import io from 'socket.io-client';
+import {
+    Container, Typography, Box, Button, Grid, Card, CardContent, FormControlLabel, RadioGroup, Radio, TextField, FormControl, InputLabel, Select, MenuItem, Checkbox
+} from '@mui/material';
+import { Mic, MicOff, Videocam, ScreenShare, CallEnd } from '@mui/icons-material';
 
 const BASE_URL = process.env.REACT_APP_API_BASE || "http://localhost:5000";
 const socket = io(BASE_URL, { transports: ["websocket"], withCredentials: true });
@@ -10,14 +13,12 @@ const socket = io(BASE_URL, { transports: ["websocket"], withCredentials: true }
 export default function CallsPage({ user }) {
     const navigate = useNavigate();
 
-    /* ------------------------------------------------- Состояние UI */
     const [callType, setCallType] = useState("personal");
     const [allUsers, setAllUsers] = useState([]);
     const [selectedUser, setSelectedUser] = useState("");
     const [selectedUsers, setSelectedUsers] = useState([]);
 
     const [callActive, setCallActive] = useState(false);
-    const [callStart, setCallStart] = useState(null);
     const [incomingCall, setIncomingCall] = useState(null);
     const [participants, setParticipants] = useState([]);
 
@@ -25,89 +26,60 @@ export default function CallsPage({ user }) {
     const [camOn, setCamOn] = useState(false);
     const [screenOn, setScreenOn] = useState(false);
 
-    const [error, setError] = useState("");
-
-    /* -------------------------- локальные медиа-данные и пиры ------------- */
-    const audioOnly = useMemo(() => ({ audio: true, video: false }), []);
-    const camOnly = useMemo(() => ({ video: { width: 1280, height: 720 } }), []);
-    const screenVid = useMemo(() => ({ video: true /* аудио экрана обычно не нужно */ }), []);
-
     const localStreamRef = useRef(null);
     const camTrackRef = useRef(null);
     const screenTrackRef = useRef(null);
-
-    // remoteStreams: { peerId: { audio: MediaStreamTrack|null, video: MediaStreamTrack[] } }
     const [remoteStreams, setRemoteStreams] = useState({});
     const peerConnsRef = useRef({});
-
     const mounted = useRef(true);
+
     useEffect(() => () => { mounted.current = false; }, []);
 
-    /* ------------------------ хелпер для повторного согласования SDP ---------------- */
-    const renegotiate = useCallback(
-        async (pc, peerId) => {
-            try {
-                const offer = await pc.createOffer({ iceRestart: false });
-                await pc.setLocalDescription(offer);
-                socket.emit("webrtc_offer", { to: peerId, from: user.id, sdp: pc.localDescription });
-            } catch (e) {
-                console.error("Renegotiate error", e);
+    const renegotiate = useCallback(async (pc, peerId) => {
+        try {
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            socket.emit("webrtc_offer", { to: peerId, from: user.id, sdp: pc.localDescription });
+        } catch (e) {
+            console.error("Renegotiate error", e);
+        }
+    }, [user]);
+
+    const createPC = useCallback((peerId) => {
+        const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+        if (localStreamRef.current) {
+            localStreamRef.current.getTracks().forEach(t => pc.addTrack(t, localStreamRef.current));
+        }
+        pc.onicecandidate = e => {
+            if (e.candidate) {
+                socket.emit("webrtc_candidate", { to: peerId, from: user.id, candidate: e.candidate });
             }
-        },
-        [user?.id]
-    );
-
-    /* ---------------------- создание RTCPeerConnection ------------ */
-    const createPC = useCallback(
-        (peerId) => {
-            const pc = new RTCPeerConnection({
-                iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-            });
-
-            // добавить все текущие локальные треки
-            if (localStreamRef.current) {
-                localStreamRef.current.getTracks().forEach((t) => pc.addTrack(t, localStreamRef.current));
-            }
-
-            pc.onicecandidate = (e) => {
-                if (e.candidate) {
-                    socket.emit("webrtc_candidate", { to: peerId, from: user.id, candidate: e.candidate });
+        };
+        pc.ontrack = e => {
+            if (!mounted.current) return;
+            setRemoteStreams(prev => {
+                const entry = prev[peerId] ?? { audio: null, video: [] };
+                if (e.track.kind === "audio") entry.audio = e.track;
+                else {
+                    if (!entry.video.some(v => v.id === e.track.id)) entry.video.push(e.track);
                 }
-            };
+                return { ...prev, [peerId]: entry };
+            });
+        };
+        peerConnsRef.current[peerId] = pc;
+        return pc;
+    }, [user]);
 
-            pc.ontrack = (e) => {
-                if (!mounted.current) return;
-                setRemoteStreams((prev) => {
-                    const entry = prev[peerId] ?? { audio: null, video: [] };
-                    if (e.track.kind === "audio") entry.audio = e.track;
-                    else {
-                        // не дублировать видеотреки
-                        if (!entry.video.some((v) => v.id === e.track.id)) entry.video.push(e.track);
-                    }
-                    return { ...prev, [peerId]: entry };
-                });
-            };
-
-            peerConnsRef.current[peerId] = pc;
-            return pc;
-        },
-        [user?.id]
-    );
-
-    /* -------------------- завершение и история звонков ------------------------ */
     const cleanUp = useCallback(() => {
-        Object.values(peerConnsRef.current).forEach((pc) => {
-            try {
-                pc.getSenders().forEach((s) => s.track && s.track.stop());
-            } catch {}
+        Object.values(peerConnsRef.current).forEach(pc => {
+            pc.getSenders().forEach(s => s.track && s.track.stop());
             pc.close();
         });
         peerConnsRef.current = {};
-        localStreamRef.current?.getTracks().forEach((t) => t.stop());
+        localStreamRef.current?.getTracks().forEach(t => t.stop());
         localStreamRef.current = null;
         camTrackRef.current = null;
         screenTrackRef.current = null;
-
         setRemoteStreams({});
         setCallActive(false);
         setMicOn(true);
@@ -116,24 +88,22 @@ export default function CallsPage({ user }) {
         setParticipants([]);
     }, []);
 
-    const leaveCallSilent = useCallback(() => {
+    const leaveCall = () => {
         cleanUp();
-    }, [cleanUp]);
+    };
 
-    /* -------------------------- WebSocket-события ------------------------- */
     useEffect(() => {
-        if (!user) { navigate("/"); return; }
+        if (!user) { navigate('/'); return; }
 
-        // список друзей
         fetch(`${BASE_URL}/friends/${user.id}`)
-            .then((r) => r.json())
-            .then((d) => mounted.current && setAllUsers(Array.isArray(d) ? d : []))
+            .then(res => res.json())
+            .then(data => { if (mounted.current) setAllUsers(Array.isArray(data) ? data : []); })
             .catch(console.error);
 
         socket.emit("register_user", { user_id: user.id });
 
-        const onIncoming = (d) => mounted.current && !callActive && setIncomingCall(d);
-        const onOffer = async (d) => {
+        const onIncoming = d => mounted.current && !callActive && setIncomingCall(d);
+        const onOffer = async d => {
             try {
                 const pc = createPC(d.from);
                 await pc.setRemoteDescription(new RTCSessionDescription(d.sdp));
@@ -142,10 +112,9 @@ export default function CallsPage({ user }) {
                 socket.emit("webrtc_answer", { to: d.from, from: user.id, sdp: pc.localDescription });
             } catch (e) {
                 console.error("Error handling offer", e);
-                setError("Ошибка подключения. Попробуйте ещё раз.");
             }
         };
-        const onAnswer = async (d) => {
+        const onAnswer = async d => {
             const pc = peerConnsRef.current[d.from];
             try {
                 pc && (await pc.setRemoteDescription(new RTCSessionDescription(d.sdp)));
@@ -153,7 +122,7 @@ export default function CallsPage({ user }) {
                 console.error("Error handling answer", e);
             }
         };
-        const onCandidate = async (d) => {
+        const onCandidate = async d => {
             const pc = peerConnsRef.current[d.from];
             try {
                 pc && d.candidate && (await pc.addIceCandidate(new RTCIceCandidate(d.candidate)));
@@ -161,7 +130,7 @@ export default function CallsPage({ user }) {
                 console.error("Error adding candidate", e);
             }
         };
-        const onEndCall = () => leaveCallSilent();
+        const onEndCall = () => cleanUp();
 
         socket.on("incoming_call", onIncoming);
         socket.on("webrtc_offer", onOffer);
@@ -176,30 +145,27 @@ export default function CallsPage({ user }) {
             socket.off("webrtc_candidate", onCandidate);
             socket.off("end_call", onEndCall);
         };
-    }, [user, navigate, createPC, leaveCallSilent, callActive]);
+    }, [user, navigate, callActive, createPC, cleanUp]);
 
-    /* ------------------------- логика звонков ------------------------ */
     const ensureBaseAudio = async () => {
         if (!localStreamRef.current) {
             try {
-                localStreamRef.current = await navigator.mediaDevices.getUserMedia(audioOnly);
+                localStreamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
             } catch (e) {
-                console.error(e);
-                setError("Нет доступа к микрофону. Проверьте разрешения браузера.");
+                alert("Нет доступа к микрофону.");
                 throw e;
             }
         }
     };
 
-    const joinPeers = async (tgt, answerMode) => {
+    const joinPeers = async (targets, answerMode) => {
         await ensureBaseAudio();
         setCallActive(true);
-        setCallStart(new Date());
-        setParticipants(tgt);
-
-        if (!answerMode) socket.emit("initiate_call", { from: user.id, callType, targets: tgt });
-
-        for (const pid of tgt) {
+        setParticipants(targets);
+        if (!answerMode) {
+            socket.emit("initiate_call", { from: user.id, callType, targets });
+        }
+        for (const pid of targets) {
             const pc = createPC(pid);
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
@@ -208,271 +174,174 @@ export default function CallsPage({ user }) {
     };
 
     const acceptCall = () => {
-        if (!incomingCall) return;
-        joinPeers([incomingCall.from], true).catch(() => {});
-        setIncomingCall(null);
+        if (incomingCall) {
+            joinPeers([incomingCall.from], true).catch(() => {});
+            setIncomingCall(null);
+        }
     };
 
     const startCall = () => {
-        setError("");
-        const targets = callType === "personal" ? [selectedUser] : selectedUsers.filter(Boolean);
-        const uniqTargets = [...new Set(targets.map(String))].filter(Boolean);
-        if (uniqTargets.length) joinPeers(uniqTargets, false).catch(() => {});
-    };
-
-    /* -------------------- переключение медиа ------------------------ */
-    const toggleMic = () => {
-        if (!localStreamRef.current) return;
-        localStreamRef.current.getAudioTracks().forEach((t) => {
-            t.enabled = !micOn;
-        });
-        setMicOn((p) => !p);
-    };
-
-    const toggleCam = async () => {
-        if (!localStreamRef.current) return;
-        if (!camOn) {
-            try {
-                const cam = await navigator.mediaDevices.getUserMedia(camOnly);
-                camTrackRef.current = cam.getVideoTracks()[0];
-                localStreamRef.current.addTrack(camTrackRef.current);
-                setCamOn(true);
-                // обновить для всех
-                for (const [pid, pc] of Object.entries(peerConnsRef.current)) {
-                    pc.addTrack(camTrackRef.current, localStreamRef.current);
-                    await renegotiate(pc, pid);
-                }
-            } catch (e) {
-                console.error(e);
-                setError("Нет доступа к камере.");
-            }
-        } else {
-            try {
-                if (camTrackRef.current) {
-                    localStreamRef.current.removeTrack(camTrackRef.current);
-                    camTrackRef.current.stop();
-                }
-            } finally {
-                setCamOn(false);
-                for (const [pid, pc] of Object.entries(peerConnsRef.current)) {
-                    await renegotiate(pc, pid);
-                }
-            }
+        const targets = callType === "personal" ? [selectedUser] : selectedUsers;
+        if (targets.length) {
+            joinPeers(targets, false).catch(() => {});
         }
     };
 
-    const toggleScreen = async () => {
-        if (!localStreamRef.current) return;
-        if (!screenOn) {
-            try {
-                const scr = await navigator.mediaDevices.getDisplayMedia(screenVid);
-                screenTrackRef.current = scr.getVideoTracks()[0];
-                localStreamRef.current.addTrack(screenTrackRef.current);
-                setScreenOn(true);
-                for (const [pid, pc] of Object.entries(peerConnsRef.current)) {
-                    pc.addTrack(screenTrackRef.current, localStreamRef.current);
-                    await renegotiate(pc, pid);
-                }
-                // когда пользователь прекращает шарить экран
-                screenTrackRef.current.onended = toggleScreen;
-            } catch (e) {
-                console.error(e);
-                setError("Не удалось начать шаринг экрана.");
-            }
-        } else {
-            try {
-                if (screenTrackRef.current) {
-                    localStreamRef.current.removeTrack(screenTrackRef.current);
-                    screenTrackRef.current.stop();
-                    screenTrackRef.current = null;
-                }
-            } finally {
-                setScreenOn(false);
-                for (const [pid, pc] of Object.entries(peerConnsRef.current)) {
-                    await renegotiate(pc, pid);
-                }
-            }
-        }
-    };
-
-    const leaveCall = () => {
-        try {
-            socket.emit("end_call", { from: user.id, targets: participants });
-            if (callStart) {
-                fetch(`${BASE_URL}/call_history`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        caller_id: user.id,
-                        call_type: callType,
-                        participants: `,${participants.join(",")},`,
-                        start_time: callStart.toISOString(),
-                        end_time: new Date().toISOString(),
-                    }),
-                }).catch(console.error);
-            }
-        } finally {
-            cleanUp();
-        }
-    };
-
-    /* ------------------------- рендер -------------------------- */
     return (
-        <div className="calls-page-container container">
-            <h2>Звонки</h2>
-
-            {error && <div className="error-inline">{error}</div>}
-
-            {/* Входящий звонок */}
-            {!callActive && incomingCall && (
-                <div className="incoming-call-alert" role="dialog" aria-modal="true">
-                    <p>Входящий звонок от ID {incomingCall.from}</p>
-                    <button onClick={acceptCall}>Принять</button>
-                    <button onClick={() => setIncomingCall(null)} style={{ marginLeft: 8 }}>
-                        Отклонить
-                    </button>
-                </div>
+        <Container sx={{ mt: 4 }}>
+            <Typography variant="h4" gutterBottom>Звонки</Typography>
+            {incomingCall && !callActive && (
+                <Box sx={{ p: 2, border: '1px dashed #ff8c00', mb: 2, borderRadius: 1, bgcolor: '#fffbe6' }}>
+                    <Typography>Входящий звонок от ID {incomingCall.from}</Typography>
+                    <Button onClick={acceptCall} color="primary" sx={{ mt: 1 }}>Принять</Button>
+                    <Button onClick={() => setIncomingCall(null)} sx={{ mt: 1, ml: 1 }}>Отклонить</Button>
+                </Box>
             )}
-
-            {/* Подготовка к звонку */}
             {!callActive && !incomingCall && (
-                <>
-                    <div className="call-type-choice">
-                        <label>
-                            <input
-                                type="radio"
-                                value="personal"
-                                checked={callType === "personal"}
-                                onChange={() => setCallType("personal")}
-                            />{" "}
-                            Личный
-                        </label>
-                        <label>
-                            <input
-                                type="radio"
-                                value="group"
-                                checked={callType === "group"}
-                                onChange={() => setCallType("group")}
-                            />{" "}
-                            Групповой
-                        </label>
-                    </div>
+                <Box>
+                    <Typography variant="subtitle1" gutterBottom>Тип звонка:</Typography>
+                    <RadioGroup row value={callType} onChange={(e) => setCallType(e.target.value)}>
+                        <FormControlLabel value="personal" control={<Radio />} label="Личный" />
+                        <FormControlLabel value="group" control={<Radio />} label="Групповой" />
+                    </RadioGroup>
 
-                    {callType === "personal" && (
-                        <div className="select-user-block">
-                            <h3>Выберите друга:</h3>
-                            <select defaultValue="" onChange={(e) => setSelectedUser(String(e.target.value))}>
-                                <option value="" disabled>
-                                    -- Выберите --
-                                </option>
-                                {allUsers.map((u) => (
-                                    <option key={u.id} value={u.id}>
-                                        {u.username}
-                                    </option>
+                    {callType === 'personal' && (
+                        <FormControl fullWidth sx={{ mt: 2 }}>
+                            <InputLabel>Выберите друга</InputLabel>
+                            <Select value={selectedUser} label="Выберите друга" onChange={e => setSelectedUser(e.target.value)}>
+                                {allUsers.map(u => (
+                                    <MenuItem key={u.id} value={u.id}>{u.username}</MenuItem>
                                 ))}
-                            </select>
-                        </div>
+                            </Select>
+                        </FormControl>
                     )}
-
-                    {callType === "group" && (
-                        <div className="select-user-block">
-                            <h3>Участники:</h3>
-                            {allUsers.map((u) => (
-                                <label key={u.id}>
-                                    <input
-                                        type="checkbox"
-                                        value={u.id}
-                                        checked={selectedUsers.includes(String(u.id))}
-                                        onChange={(e) => {
-                                            const id = String(u.id);
-                                            setSelectedUsers((p) =>
-                                                e.target.checked ? [...p, id] : p.filter((x) => x !== id)
-                                            );
-                                        }}
-                                    />{" "}
-                                    {u.username}
-                                </label>
+                    {callType === 'group' && (
+                        <Box sx={{ mt: 2 }}>
+                            <Typography>Участники:</Typography>
+                            {allUsers.map(u => (
+                                <FormControlLabel
+                                    key={u.id}
+                                    control={
+                                        <Checkbox
+                                            checked={selectedUsers.includes(u.id)}
+                                            onChange={e => {
+                                                if (e.target.checked) setSelectedUsers([...selectedUsers, u.id]);
+                                                else setSelectedUsers(selectedUsers.filter(id => id !== u.id));
+                                            }}
+                                        />
+                                    }
+                                    label={u.username}
+                                />
                             ))}
-                        </div>
+                        </Box>
                     )}
-
-                    <button onClick={startCall} className="start-call-button" disabled={
-                        callType === "personal" ? !selectedUser : selectedUsers.length === 0
-                    }>
+                    <Button variant="contained" color="primary" sx={{ mt: 2 }}
+                            onClick={startCall}
+                            disabled={callType === 'personal' ? !selectedUser : selectedUsers.length === 0}>
                         Начать звонок
-                    </button>
-                </>
+                    </Button>
+                </Box>
             )}
-
-            {/* Активный звонок */}
             {callActive && (
-                <div className="call-active-block">
-                    <h3>Звонок идёт…</h3>
-
-                    <div className="video-streams-container">
-                        {/* свой поток */}
-                        <div className="video-block">
-                            <h4>Вы</h4>
-                            <video
-                                autoPlay
-                                muted
-                                playsInline
-                                ref={(v) => v && (v.srcObject = localStreamRef.current)}
-                            />
-                        </div>
-
-                        {/* потоки собеседников */}
-                        {Object.entries(remoteStreams).map(([pid, obj]) => (
-                            <div className="video-block" key={pid}>
-                                <h4>Пользователь {pid}</h4>
-
-                                {/* камера */}
-                                {obj.video[0] && (
-                                    <video
-                                        autoPlay
-                                        playsInline
-                                        ref={(v) => v && (v.srcObject = new MediaStream([obj.video[0]]))}
+                <Box sx={{ mt: 3 }}>
+                    <Typography variant="h5" gutterBottom>Звонок идет…</Typography>
+                    <Grid container spacing={2}>
+                        <Grid item xs={3}>
+                            <Card>
+                                <CardContent>
+                                    <Typography>Вы</Typography>
+                                    <video autoPlay muted playsInline
+                                           ref={v => { if (v) v.srcObject = localStreamRef.current; }}
+                                           style={{ width: '100%' }}
                                     />
-                                )}
-
-                                {/* экран */}
-                                {obj.video[1] && (
-                                    <video
-                                        autoPlay
-                                        playsInline
-                                        style={{ marginTop: 8 }}
-                                        ref={(v) => v && (v.srcObject = new MediaStream([obj.video[1]]))}
-                                    />
-                                )}
-
-                                {/* звук без UI */}
-                                {obj.audio && (
-                                    <audio
-                                        autoPlay
-                                        ref={(a) => a && (a.srcObject = new MediaStream([obj.audio]))}
-                                        style={{ display: "none" }}
-                                    />
-                                )}
-                            </div>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                        {Object.entries(remoteStreams).map(([pid, tracks]) => (
+                            <Grid item xs={3} key={pid}>
+                                <Card>
+                                    <CardContent>
+                                        <Typography>Пользователь {pid}</Typography>
+                                        {tracks.video[0] && (
+                                            <video autoPlay playsInline
+                                                   ref={v => { if (v) v.srcObject = new MediaStream([tracks.video[0]]); }}
+                                                   style={{ width: '100%' }}
+                                            />
+                                        )}
+                                        {tracks.audio && (
+                                            <audio autoPlay
+                                                   ref={a => { if (a) a.srcObject = new MediaStream([tracks.audio]); }}
+                                            />
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </Grid>
                         ))}
-                    </div>
-
-                    <div className="call-controls">
-                        <button onClick={toggleMic} className="toggle-mic-btn">
-                            {micOn ? "Выключить микрофон" : "Включить микрофон"}
-                        </button>
-                        <button onClick={toggleCam} className="toggle-webcam-btn">
-                            {camOn ? "Выключить камеру" : "Включить камеру"}
-                        </button>
-                        <button onClick={toggleScreen} className="toggle-share-btn">
-                            {screenOn ? "Остановить шаринг" : "Поделиться экраном"}
-                        </button>
-                        <button onClick={leaveCall} className="end-call-btn">
-                            Завершить
-                        </button>
-                    </div>
-                </div>
+                    </Grid>
+                    <Box sx={{ mt: 2 }}>
+                        <Button onClick={() => { localStreamRef.current.getAudioTracks().forEach(t => t.enabled = !micOn); setMicOn(!micOn); }} sx={{ mr: 1 }}>
+                            {micOn ? <Mic /> : <MicOff />}
+                        </Button>
+                        <Button onClick={async () => {
+                            if (!camOn) {
+                                try {
+                                    const cam = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
+                                    camTrackRef.current = cam.getVideoTracks()[0];
+                                    localStreamRef.current.addTrack(camTrackRef.current);
+                                    setCamOn(true);
+                                    for (const [pid, pc] of Object.entries(peerConnsRef.current)) {
+                                        pc.addTrack(camTrackRef.current, localStreamRef.current);
+                                        await renegotiate(pc, pid);
+                                    }
+                                } catch {}
+                            } else {
+                                if (camTrackRef.current) {
+                                    localStreamRef.current.removeTrack(camTrackRef.current);
+                                    camTrackRef.current.stop();
+                                    setCamOn(false);
+                                    for (const [pid, pc] of Object.entries(peerConnsRef.current)) {
+                                        await renegotiate(pc, pid);
+                                    }
+                                }
+                            }
+                        }} sx={{ mr: 1 }}>
+                            <Videocam color={camOn ? "primary" : "inherit"} />
+                        </Button>
+                        <Button onClick={async () => {
+                            if (!screenOn) {
+                                try {
+                                    const scr = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                                    screenTrackRef.current = scr.getVideoTracks()[0];
+                                    localStreamRef.current.addTrack(screenTrackRef.current);
+                                    setScreenOn(true);
+                                    for (const [pid, pc] of Object.entries(peerConnsRef.current)) {
+                                        pc.addTrack(screenTrackRef.current, localStreamRef.current);
+                                        await renegotiate(pc, pid);
+                                    }
+                                    screenTrackRef.current.onended = () => {};
+                                } catch {
+                                    alert("Не удалось начать шаринг экрана.");
+                                }
+                            } else {
+                                if (screenTrackRef.current) {
+                                    localStreamRef.current.removeTrack(screenTrackRef.current);
+                                    screenTrackRef.current.stop();
+                                    screenTrackRef.current = null;
+                                    setScreenOn(false);
+                                    for (const [pid, pc] of Object.entries(peerConnsRef.current)) {
+                                        await renegotiate(pc, pid);
+                                    }
+                                }
+                            }
+                        }} sx={{ mr: 1 }}>
+                            <ScreenShare color={screenOn ? "primary" : "inherit"} />
+                        </Button>
+                        <Button onClick={leaveCall} color="error">
+                            <CallEnd />
+                        </Button>
+                    </Box>
+                </Box>
             )}
-        </div>
+        </Container>
     );
 }
