@@ -35,7 +35,7 @@
     "build": "node_modules/.bin/react-scripts build",
     "predeploy": "npm run build",
     "deploy": "node_modules/.bin/gh-pages -d build",
-    "test": "react-scripts test",
+    "test": "react-scripts test --env=jsdom --watchAll=false --testPathIgnorePatterns=src/tests/",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {

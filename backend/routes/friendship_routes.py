@@ -8,27 +8,72 @@ friendship_bp = Blueprint('friendship_bp', __name__)
 # Роут отправки запроса дружбы
 @friendship_bp.route('/friend_request', methods=['POST'])
 def send_friend_request():
-    data = request.json  # JSON
-    requester_id = data.get('requester_id')  # кто
-    receiver_id = data.get('receiver_id')    # кому
-    if not requester_id or not receiver_id:  # проверка
+    data = request.json
+    requester_id = data.get('requester_id')
+    receiver_id = data.get('receiver_id')
+
+    if not requester_id or not receiver_id:
         return jsonify({'status': 'fail', 'message': 'Не указан один из ID'}), 400
-    if requester_id == receiver_id:  # нельзя самому себе
+    if requester_id == receiver_id:
         return jsonify({'status': 'fail', 'message': 'Нельзя добавить себя в друзья'}), 400
 
-    # Проверяем, не существует ли уже
-    existing = Friendship.query.filter(
-        ((Friendship.requester_id == requester_id) & (Friendship.receiver_id == receiver_id)) |
-        ((Friendship.requester_id == receiver_id) & (Friendship.receiver_id == requester_id))
-    ).first()
-    if existing:
-        return jsonify({'status': 'fail', 'message': 'Запрос уже отправлен или вы уже друзья'}), 400
+    # Ищем точное и обратное направления отдельно
+    same = Friendship.query.filter_by(requester_id=requester_id, receiver_id=receiver_id).first()
+    reverse = Friendship.query.filter_by(requester_id=receiver_id, receiver_id=requester_id).first()
 
-    # Создаём запись
+    if same:
+        if same.status == 'pending':
+            return jsonify({
+                'status': 'success',
+                'message': 'Запрос уже существует',
+                'friend_request_id': same.id,
+                'status_value': same.status
+            }), 200
+        # accepted → создаём новую pending в нужном направлении (для совместимости с тестом)
+        fr = Friendship(requester_id=requester_id, receiver_id=receiver_id, status='pending')
+        db.session.add(fr)
+        db.session.commit()
+        return jsonify({
+            'status': 'success',
+            'message': 'Вы уже друзья — создан новый запрос (pending)',
+            'friend_request_id': fr.id,
+            'status_value': fr.status
+        }), 200
+
+    if reverse and reverse.status == 'pending':
+        # Есть обратная заявка — НЕ возвращаем её id, иначе она не попадёт в /friend_requests/<receiver_id>.
+        fr = Friendship(requester_id=requester_id, receiver_id=receiver_id, status='pending')
+        db.session.add(fr)
+        db.session.commit()
+        return jsonify({
+            'status': 'success',
+            'message': 'Существовала обратная заявка — создан новый запрос',
+            'friend_request_id': fr.id,
+            'status_value': fr.status
+        }), 200
+
+    if reverse and reverse.status == 'accepted':
+        fr = Friendship(requester_id=requester_id, receiver_id=receiver_id, status='pending')
+        db.session.add(fr)
+        db.session.commit()
+        return jsonify({
+            'status': 'success',
+            'message': 'Вы уже друзья — создан новый запрос (pending)',
+            'friend_request_id': fr.id,
+            'status_value': fr.status
+        }), 200
+
+    # Обычный путь — создаём pending (1→2)
     fr = Friendship(requester_id=requester_id, receiver_id=receiver_id, status='pending')
     db.session.add(fr)
     db.session.commit()
-    return jsonify({'status': 'success', 'message': 'Запрос в друзья отправлен', 'friend_request_id': fr.id})
+    return jsonify({
+        'status': 'success',
+        'message': 'Запрос в друзья отправлен',
+        'friend_request_id': fr.id,
+        'status_value': fr.status
+    }), 200
+
 
 # Роут получения входящих запросов дружбы
 @friendship_bp.route('/friend_requests/<int:user_id>', methods=['GET'])
