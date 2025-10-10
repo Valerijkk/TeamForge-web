@@ -14,23 +14,27 @@ jobs:
 
     services:
       postgres:
-        image: postgres:13
+        image: postgres:16
         env:
-          POSTGRES_USER: user
-          POSTGRES_PASSWORD: pass
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
           POSTGRES_DB: teamforge
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U user -d teamforge"
+          --health-cmd="pg_isready -U postgres -d teamforge"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
 
     env:
       BASE: http://localhost:5000
-      DATABASE_URL: postgresql://user:pass@localhost:5432/teamforge
-      FLASK_ENV: testing
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: teamforge
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: "5432"
+      MAIL_SUPPRESS_SEND: "1"   # не отправляем почту в CI
       PYTHONUNBUFFERED: "1"
 
     steps:
@@ -42,7 +46,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: System deps (pg_isready, curl)
+      - name: System deps (psql, curl, iconv)
         run: |
           sudo apt-get update
           sudo apt-get install -y postgresql-client curl
@@ -50,104 +54,95 @@ jobs:
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
 
-      - name: Install backend deps
+      - name: Install backend deps (fallback на UTF-16 через iconv)
         run: |
-          if [ -f backend/requirements.txt ]; then pip install -r backend/requirements.txt; \
-          elif [ -f requirements.txt ]; then pip install -r requirements.txt; \
-          else echo "No requirements.txt found"; fi
-          pip install pytest httpx requests
+          set -eo pipefail
+          if [ -f backend/requirements.txt ]; then
+            # Пытаемся напрямую
+            if ! pip install -r backend/requirements.txt; then
+              echo "pip -r backend/requirements.txt failed — пробуем iconv utf-16 -> utf-8"
+              iconv -f utf-16 -t utf-8 backend/requirements.txt > /tmp/req.txt || true
+              if [ -s /tmp/req.txt ]; then
+                pip install -r /tmp/req.txt
+              else
+                echo "Не удалось перекодировать requirements.txt — проверь кодировку файла" && exit 1
+              fi
+            fi
+          else
+            echo "No backend/requirements.txt found"
+          fi
+          pip install pytest requests httpx
 
       - name: Wait for Postgres
         run: |
           for i in {1..30}; do
-            pg_isready -h 127.0.0.1 -p 5432 -U user && exit 0
+            pg_isready -h 127.0.0.1 -p 5432 -U "$POSTGRES_USER" && exit 0
             echo "Postgres not ready yet... ($i/30)"; sleep 2
           done
           echo "Postgres did not become ready"; exit 1
 
-      - name: Run DB migrations (optional)
+      - name: Run DB init SQL (если есть)
+        env:
+          PGPASSWORD: ${{ env.POSTGRES_PASSWORD }}
         run: |
-          if [ -f backend/alembic.ini ]; then
-            pip install alembic
-            alembic -c backend/alembic.ini upgrade head
+          if [ -f backend/db/init.sql ]; then
+            psql -h 127.0.0.1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f backend/db/init.sql
           else
-            echo "No Alembic config — skipping migrations"
+            echo "No backend/db/init.sql — skipping"
           fi
 
       - name: Start backend API on :5000 (in background)
         run: |
           set -e
-          START_CMD="${START_CMD:-}"
-          if [ -z "$START_CMD" ]; then
-            if [ -f backend/app.py ]; then
-              START_CMD="python backend/app.py"
-            elif [ -f backend/main.py ]; then
-              START_CMD="python backend/main.py"
-            elif python - <<'PY'
-  import importlib.util, sys
-  sys.exit(0 if importlib.util.find_spec('uvicorn') else 1)
-  PY
-  then
-  START_CMD="uvicorn backend.main:app --host 0.0.0.0 --port 5000"
-  else
-  if [ -f backend/wsgi.py ]; then
-  START_CMD="python backend/wsgi.py"
-  else
-  START_CMD="flask --app backend.app:app run --host 0.0.0.0 --port 5000"
-  fi
-  fi
-  fi
-echo "Starting: $START_CMD"
-  bash -lc "$START_CMD > /tmp/backend.out 2>&1 &"
-  echo $! > /tmp/backend.pid
+          # Запускаем как модуль — в коде есть относительные импорты (from .config import Config)
+          python -m backend.app > /tmp/backend.out 2>&1 &
+          echo $! > /tmp/backend.pid
 
-- name: Wait for API to be healthy
-  env:
-    BASE: ${{ env.BASE }}
-  run: |
-    for i in {1..60}; do
-      if curl -fsS "$BASE/health" >/dev/null 2>&1 || curl -fsS "$BASE/" >/dev/null 2>&1; then
-        echo "API is up"; exit 0
-      fi
-      echo "Waiting for API... ($i/60)"; sleep 2
-    done
-    echo "API did not start in time"; exit 1
+      - name: Wait for API to be healthy
+        env:
+          BASE: ${{ env.BASE }}
+        run: |
+          for i in {1..90}; do
+            if curl -fsS "$BASE/healthz" >/dev/null 2>&1 || curl -fsS "$BASE/" >/dev/null 2>&1; then
+              echo "API is up"; exit 0
+            fi
+            echo "Waiting for API... ($i/90)"; sleep 2
+          done
+          echo "API did not start in time"; tail -n +1 /tmp/backend.out || true; exit 1
 
-- name: Run pytest (unit & integration)
-  run: pytest --maxfail=1 --disable-warnings -q backend/tests
+      - name: Run pytest (unit & integration)
+        run: pytest --maxfail=1 --disable-warnings -q backend/tests
 
-- name: Show backend logs if tests failed
-  if: failure()
-  run: |
-    echo "---- ps aux | grep backend ----"
-    ps aux | grep -iE "python.+backend|uvicorn|flask" || true
-    echo "---- /tmp/backend.out ----"
-    [ -f /tmp/backend.out ] && tail -n +1 /tmp/backend.out || echo "No backend logs"
+      - name: Show backend logs if tests failed
+        if: failure()
+        run: |
+          echo "---- /tmp/backend.out ----"
+          [ -f /tmp/backend.out ] && tail -n +1 /tmp/backend.out || echo "No backend logs"
 
-frontend-ci:
-  name: Frontend build & tests
-  runs-on: ubuntu-latest
-  if: ${{ hashFiles('frontend/package.json') != '' }}
-  steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+  frontend:
+    name: Frontend build & tests
+    runs-on: ubuntu-latest
+    if: ${{ hashFiles('frontend/package.json') != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Setup Node
-      uses: actions/setup-node@v4
-      with:
-        node-version: "20"
-        cache: "npm"
-        cache-dependency-path: frontend/package-lock.json
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
 
-    - name: Install deps (frontend)
-      working-directory: frontend
-      run: |
-        if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - name: Install deps (frontend)
+        working-directory: frontend
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
-    - name: Build (frontend)
-      working-directory: frontend
-      run: npm run build --if-present
+      - name: Build (frontend)
+        working-directory: frontend
+        run: npm run build --if-present
 
-    - name: Run frontend tests
-      working-directory: frontend
-      run: npm test --if-present -- --ci --reporters=default
+      - name: Run frontend tests
+        working-directory: frontend
+        run: npm test --if-present -- --ci --reporters=default
