@@ -1,0 +1,92 @@
+name: Continuous Integration        # Название workflow для CI
+
+on:
+  push:                            # Триггер по пушу в любую ветку
+    branches: ['*']
+
+jobs:
+  backend:                         # Стадия тестов для бэкенда
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2         # Чекаутим репозиторий
+      - uses: actions/setup-python@v2     # Устанавливаем Python
+        with:
+          python-version: '3.x'
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements.txt  # Устанавливаем зависимости Python
+      - name: Run backend tests
+        run: pytest --maxfail=1 --disable-warnings -q backend/tests  # Запускаем unit/integration-тесты бэкенда
+
+  frontend:                        # Стадия сборки фронтенда
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2         # Чекаутим репозиторий
+      - uses: actions/setup-node@v2       # Устанавливаем Node.js
+        with:
+          node-version: '18'
+      - name: Install frontend dependencies
+        run: npm install               # Устанавливаем зависимости фронтенда
+      - name: Build frontend
+        run: npm run build             # Сборка React-приложения
+
+  database:                        # Стадия для подготовки базы данных
+    name: Database Setup
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13            # Сервис PostgreSQL
+        env:
+          POSTGRES_USER: user         # Пользователь БД
+          POSTGRES_PASSWORD: pass     # Пароль БД
+          POSTGRES_DB: teamforge      # Имя БД
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready    # Команда проверки готовности
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Wait for DB
+        run: sleep 10                 # Ждем готовности базы данных
+      - name: Run migrations
+        run: |
+          psql -h localhost -U user -d teamforge -f backend/db/init.sql  # Применяем миграции
+
+  build_all:                       # Стадия сборки после подготовки
+    name: Full Build
+    runs-on: ubuntu-latest
+    needs: [backend, frontend, database]  # Должна дождаться предыдущих стадий
+    steps:
+      - name: Setup repository
+        uses: actions/checkout@v2     # Чекаутим репозиторий (для безопасности)
+      - name: Build all components
+        run: echo "Everything built successfully!"  # Точка сборки (может быть объединением артефактов)
+
+  unit_tests:                      # Стадия unit-тестов
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: [build_all]            # Зависит от успешной сборки
+    steps:
+      - name: Run unit tests
+        run: |
+          npm run test              # Запускаем frontend unit-тесты
+          pytest --maxfail=1 --disable-warnings -q backend/tests/unit  # Запускаем backend unit-тесты
+
+  integration_tests:             # Стадия интеграционных тестов
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [unit_tests]           # Выполняется после unit-тестов
+    steps:
+      - name: Run integration tests
+        run: pytest --maxfail=1 --disable-warnings -q backend/tests/integration  # Интеграционные тесты бэкенда
+
+  e2e_tests:                     # Стадия End-to-End тестов
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    needs: [integration_tests]    # Выполняется после интеграционных тестов
+    steps:
+      - name: Run E2E Tests
+        run: npx cypress run        # Запуск E2E тестов через Cypress
