@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:16
@@ -21,52 +19,46 @@ services:
 
   backend:
     build:
-      context: .
-      dockerfile: Dockerfile.backend
+      context: ./backend        # ← папка, где лежит Dockerfile бекенда
+      dockerfile: Dockerfile
     image: myteamforge/backend:latest
     container_name: backend
-    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      # backend/config.py возьмёт эти значения
       - POSTGRES_DB=teamforge
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
-      # Опционально: CORS (на фронт по умолчанию 3000)
-      - CORS_ALLOWED_ORIGINS=http://localhost:3000
-      # Модуль приложения для gunicorn (backend/app.py => backend.app:app)
-      - APP_MODULE=backend.app:app
-      # Прод окружение
-      - FLASK_ENV=production
+      # если у тебя другой entrypoint — просто переопредели APP_MODULE здесь:
+      # - APP_MODULE=backend.server:create_app()
     volumes:
-      # чтобы /uploads жили вне контейнера
       - ./backend/uploads:/app/backend/uploads
     ports:
       - "5000:5000"
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:5000/healthz"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3
 
   frontend:
     build:
-      context: .
-      dockerfile: Dockerfile.frontend
+      context: ./frontend       # ← папка, где лежит Dockerfile фронта
+      dockerfile: Dockerfile
       args:
-        # В React CRA переменные читаются на этапе билда
-        # код у тебя сейчас хардкодит http://localhost:5000, но оставлю на будущее
-        REACT_APP_API_URL: "http://localhost:5000"
+        REACT_APP_API_URL: "http://backend:5000"
     image: myteamforge/frontend:latest
     container_name: frontend
-    restart: unless-stopped
     depends_on:
       backend:
         condition: service_healthy
+    environment:
+      # на рантайме это не нужно, переменная зашита на этапе сборки,
+      # оставляю на случай, если будешь читать её в JS runtime способом
+      - REACT_APP_API_URL=http://backend:5000
     ports:
       - "3000:80"
 
