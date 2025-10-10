@@ -1,22 +1,21 @@
+// AIAssistantPage.jsx
 import React from 'react';
-import './AIAssistantPage.css';
+import { Container, Typography, Box } from '@mui/material';
 
 function AIAssistantPage() {
     return (
-        <div className="container ai-assistant-container">
-            {/* Заголовок раздела ИИ-помощника */}
-            <h2 className="ai-assistant-title">ИИ Помощник</h2>
-            {/* Обёртка для iframe с внешним интерфейсом ИИ */}
-            <div className="ai-assistant-iframe-wrapper">
+        <Container sx={{ p: 2 }}>
+            <Typography variant="h4" gutterBottom>ИИ Помощник</Typography>
+            <Box sx={{ width: '100%', height: 800 }}>
                 <iframe
                     src="https://www.blackbox.ai/"
                     title="ИИ Помощник"
                     width="100%"
-                    height="1000px"
+                    height="100%"
                     style={{ border: 'none' }}
                 />
-            </div>
-        </div>
+            </Box>
+        </Container>
     );
 }
 
