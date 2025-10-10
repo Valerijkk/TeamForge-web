@@ -1,53 +1,31 @@
-// src/setupTests.js
+/* eslint-disable */
 import '@testing-library/jest-dom';
 
-const React = require('react');
+// Мокаем react-router-dom (ESM v7) без обращения к внешним переменным
+jest.mock('react-router-dom', () => ({
+    __esModule: true,
+    // Примитивные "обёртки" — просто пропускают детей
+    MemoryRouter: ({ children }) => (children ?? null),
+    BrowserRouter: ({ children }) => (children ?? null),
+    Routes: ({ children }) => (children ?? null),
+    Route: ({ element, children }) => (element ?? children ?? null),
+    Link: ({ children }) => (children ?? null),
+    NavLink: ({ children }) => (children ?? null),
+    Outlet: ({ children }) => (children ?? null),
 
-/**
- * Мокаем react-router-dom как "виртуальный" модуль,
- * чтобы Jest не пытался его резолвить (ESM в v7 ломает CRA/Jest).
- */
-jest.mock(
-    'react-router-dom',
-    () => ({
-        __esModule: true,
-        MemoryRouter: ({ children }) => React.createElement('div', { 'data-testid': 'memory-router' }, children),
-        BrowserRouter: ({ children }) => React.createElement('div', { 'data-testid': 'browser-router' }, children),
-        Routes: ({ children }) => React.createElement('div', { 'data-testid': 'routes' }, children),
-        Route: ({ element, children }) => element ?? children ?? null,
-        Link: ({ to, children, ...rest }) =>
-            React.createElement('a', { href: typeof to === 'string' ? to : '#', ...rest }, children),
-        NavLink: ({ to, children, ...rest }) =>
-            React.createElement('a', { href: typeof to === 'string' ? to : '#', 'data-navlink': true, ...rest }, children),
-        Navigate: ({ to }) => React.createElement('span', { 'data-navigate-to': String(to) }),
-        Outlet: ({ children }) => React.createElement('div', null, children),
-        useNavigate: () => () => {},
-        useParams: () => ({}),
-        useLocation: () => ({ pathname: '/' }),
-        useSearchParams: () => [new URLSearchParams(), () => {}],
-        createSearchParams: (obj) => new URLSearchParams(obj),
-    }),
-    { virtual: true }
-);
+    // Хуки — простые заглушки
+    useNavigate: () => jest.fn(),
+    useParams: () => ({}),
+    useLocation: () => ({ pathname: '/' }),
+}));
 
-/** Глушим socket.io-client, чтобы тесты не стучались в реальный сокет */
-jest.mock(
-    'socket.io-client',
-    () => () => ({
-        on: jest.fn(),
+// Мокаем socket.io-client, чтобы тесты не пытались открыть сокеты
+jest.mock('socket.io-client', () => {
+    const createClient = () => ({
         emit: jest.fn(),
+        on: jest.fn(),
         off: jest.fn(),
         removeAllListeners: jest.fn(),
-    }),
-    { virtual: true }
-);
-
-/** Мокаем react-calendar: всегда рисуем элемент с role="grid" */
-jest.mock(
-    'react-calendar',
-    () => ({
-        __esModule: true,
-        default: (props) => React.createElement('div', { role: 'grid', className: 'react-calendar', ...props }),
-    }),
-    { virtual: true }
-);
+    });
+    return { __esModule: true, default: createClient };
+});
