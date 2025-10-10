@@ -19,11 +19,9 @@ function ProfilePage({ user, onLogout }) {
 
     const [callHistory, setCallHistory] = useState([]);
 
-    // загрузочные/ошибки
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
-    // чтобы не обновлять состояние после размонтирования
     const mountedRef = useRef(true);
     useEffect(() => {
         mountedRef.current = true;
@@ -32,10 +30,9 @@ function ProfilePage({ user, onLogout }) {
         };
     }, []);
 
-    // Загрузка базовых данных профиля
     const loadProfileData = useCallback(() => {
         setError("");
-        fetch(`${BASE_URL}/profile_data/${user.id}`)
+        return fetch(`${BASE_URL}/profile_data/${user.id}`)
             .then((res) => res.json())
             .then((data) => {
                 if (!mountedRef.current) return;
@@ -49,52 +46,45 @@ function ProfilePage({ user, onLogout }) {
             });
     }, [user?.id]);
 
-    // Загрузка списка друзей
     const loadFriends = useCallback(() => {
-        fetch(`${BASE_URL}/friends/${user.id}`)
+        return fetch(`${BASE_URL}/friends/${user.id}`)
             .then((res) => res.json())
             .then((data) => {
                 if (!mountedRef.current) return;
                 setFriends(Array.isArray(data) ? data : []);
             })
-            .catch((error) => console.error("Ошибка получения друзей:", error));
+            .catch((e) => console.error("Ошибка получения друзей:", e));
     }, [user?.id]);
 
-    // Загрузка входящих запросов в друзья
     const loadFriendRequests = useCallback(() => {
-        fetch(`${BASE_URL}/friend_requests/${user.id}`)
+        return fetch(`${BASE_URL}/friend_requests/${user.id}`)
             .then((res) => res.json())
             .then((data) => {
                 if (!mountedRef.current) return;
                 setFriendRequests(Array.isArray(data) ? data : []);
             })
-            .catch((error) => console.error("Ошибка получения запросов в друзья:", error));
+            .catch((e) => console.error("Ошибка получения запросов в друзья:", e));
     }, [user?.id]);
 
-    // Загрузка истории звонков
     const loadCallHistory = useCallback(() => {
-        fetch(`${BASE_URL}/call_history/${user.id}`)
+        return fetch(`${BASE_URL}/call_history/${user.id}`)
             .then((res) => res.json())
             .then((data) => {
                 if (!mountedRef.current) return;
                 setCallHistory(Array.isArray(data) ? data : []);
             })
-            .catch((error) => console.error("Ошибка получения истории звонков:", error));
+            .catch((e) => console.error("Ошибка получения истории звонков:", e));
     }, [user?.id]);
 
-    // При монтировании — загрузить
+    // грузим данные только если user существует; без редиректа
     useEffect(() => {
-        if (!user) {
-            navigate("/");
-            return;
-        }
+        if (!user) return;
         setLoading(true);
         Promise.all([loadProfileData(), loadFriends(), loadFriendRequests(), loadCallHistory()])
             .catch(() => {})
             .finally(() => mountedRef.current && setLoading(false));
-    }, [user, navigate, loadProfileData, loadFriends, loadFriendRequests, loadCallHistory]);
+    }, [user, loadProfileData, loadFriends, loadFriendRequests, loadCallHistory, navigate]);
 
-    // Поиск пользователей для добавления в друзья
     const handleSearch = () => {
         const q = (searchQuery || "").trim();
         if (!q) {
@@ -105,13 +95,12 @@ function ProfilePage({ user, onLogout }) {
             .then((res) => res.json())
             .then((data) => {
                 const list = Array.isArray(data) ? data : [];
-                const filtered = list.filter((u) => u.id !== user.id && !friends.some((f) => f.id === u.id));
+                const filtered = list.filter((u) => u.id !== (user?.id ?? -1) && !friends.some((f) => f.id === u.id));
                 if (mountedRef.current) setSearchResults(filtered);
             })
             .catch((error) => console.error("Ошибка поиска пользователей:", error));
     };
 
-    // запросы в друзья
     const addFriend = (receiverId) => {
         const body = { requester_id: user.id, receiver_id: receiverId };
         fetch(`${BASE_URL}/friend_request`, {
@@ -122,7 +111,6 @@ function ProfilePage({ user, onLogout }) {
             .then((res) => res.json())
             .then((data) => {
                 console.log("Ответ addFriend:", data.message);
-                // можно сразу скрыть из выдачи
                 setSearchResults((prev) => prev.filter((u) => u.id !== receiverId));
                 loadFriendRequests();
             })
@@ -170,7 +158,6 @@ function ProfilePage({ user, onLogout }) {
             .catch((error) => console.error("Ошибка при удалении друга:", error));
     };
 
-    // Локальная строка времени -> toLocaleString через ISO
     const formatUTC = (localStr) => {
         if (!localStr) return "";
         const iso = localStr.replace(" ", "T") + ":00Z";
@@ -179,143 +166,142 @@ function ProfilePage({ user, onLogout }) {
         return d.toLocaleString();
     };
 
-    if (!user) {
-        return <div>Пожалуйста, войдите!</div>;
-    }
-
     return (
         <div className="profile-page container">
             <h2 className="profile-title">Профиль пользователя</h2>
 
-            {loading && <div className="loading-inline">Загрузка…</div>}
-            {error && <div className="error-inline">{error}</div>}
-
-            {/* Основная информация */}
-            <div className="profile-info">
-                <p>
-                    <strong>Имя пользователя:</strong> {user.username}
-                </p>
-                <p>
-                    <strong>Количество чатов:</strong> {chatsCount}
-                </p>
-                <p>
-                    <strong>Количество сообщений:</strong> {messagesCount}
-                </p>
-            </div>
-
-            {/* Список загруженных документов */}
-            <div className="profile-docs">
-                <h3>Отправленные документы:</h3>
-                {docs.length === 0 ? (
-                    <p>Нет загруженных документов</p>
-                ) : (
-                    <ul>
-                        {docs.map((doc, index) => (
-                            <li key={index}>
-                                <a href={`${BASE_URL}/uploads/${doc}`} target="_blank" rel="noreferrer">
-                                    {doc}
-                                </a>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
-
-            <hr />
-
-            {/* Список друзей */}
-            <div className="profile-friends">
-                <h3>Друзья</h3>
-                {friends.length === 0 ? (
-                    <p>У вас нет друзей.</p>
-                ) : (
-                    <ul className="friends-list">
-                        {friends.map((f) => (
-                            <li key={f.id}>
-                                {f.username}{" "}
-                                <button onClick={() => removeFriend(f.id)} title="Удалить из друзей">
-                                    Удалить
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
-
-            <hr />
-
-            {/* Входящие запросы в друзья */}
-            <div className="profile-requests">
-                <h3>Входящие запросы в друзья</h3>
-                {friendRequests.length === 0 ? (
-                    <p>Нет входящих запросов.</p>
-                ) : (
-                    <ul className="requests-list">
-                        {friendRequests.map((fr) => (
-                            <li key={fr.id}>
-                                Запрос от пользователя ID {fr.requester_id}{" "}
-                                <button onClick={() => confirmFriendRequest(fr.id)}>Принять</button>{" "}
-                                <button onClick={() => rejectFriendRequest(fr.id)}>Отклонить</button>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
-
-            <hr />
-
-            {/* Поиск новых друзей */}
-            <div className="profile-search">
-                <h3>Добавить друга</h3>
-                <div>
-                    <input
-                        type="text"
-                        placeholder="Введите ник пользователя"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                    />
-                    <button onClick={handleSearch}>Искать</button>
+            {!user && (
+                <div className="error-inline" role="alert" style={{ marginBottom: 12 }}>
+                    Пожалуйста, войдите!
                 </div>
-                {searchResults.length > 0 && (
-                    <ul className="search-results">
-                        {searchResults.map((u) => (
-                            <li key={u.id}>
-                                {u.username} <button onClick={() => addFriend(u.id)}>Добавить</button>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
+            )}
 
-            <hr />
+            {user && (
+                <>
+                    {loading && <div className="loading-inline">Загрузка…</div>}
+                    {error && <div className="error-inline">{error}</div>}
 
-            {/* История звонков */}
-            <div className="profile-calls">
-                <h3>История звонков</h3>
-                {callHistory.length === 0 ? (
-                    <p>Нет записей о звонках.</p>
-                ) : (
-                    <ul className="calls-list">
-                        {callHistory.map((call) => (
-                            <li key={call.id}>
-                                {call.call_type === "personal" ? "Личный" : "Групповой"} звонок от{" "}
-                                {call.caller_username}
-                                {call.recipients?.length > 0 && <> к {call.recipients.join(", ")}</>} с{" "}
-                                {formatUTC(call.start_time)} до {formatUTC(call.end_time)} (Длительность:{" "}
-                                {call.duration} сек.)
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
+                    <div className="profile-info">
+                        <p>
+                            <strong>Имя пользователя:</strong> {user.username}
+                        </p>
+                        <p>
+                            <strong>Количество чатов:</strong> {chatsCount}
+                        </p>
+                        <p>
+                            <strong>Количество сообщений:</strong> {messagesCount}
+                        </p>
+                    </div>
 
-            <hr />
+                    <div className="profile-docs">
+                        <h3>Отправленные документы:</h3>
+                        {docs.length === 0 ? (
+                            <p>Нет загруженных документов</p>
+                        ) : (
+                            <ul>
+                                {docs.map((doc, index) => (
+                                    <li key={index}>
+                                        <a href={`${BASE_URL}/uploads/${doc}`} target="_blank" rel="noreferrer">
+                                            {doc}
+                                        </a>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
 
-            {/* Кнопка выхода */}
-            <div className="profile-logout">
-                <button onClick={onLogout}>Выйти</button>
-            </div>
+                    <hr />
+
+                    <div className="profile-friends">
+                        <h3>Друзья</h3>
+                        {friends.length === 0 ? (
+                            <p>У вас нет друзей.</p>
+                        ) : (
+                            <ul className="friends-list">
+                                {friends.map((f) => (
+                                    <li key={f.id}>
+                                        {f.username}{" "}
+                                        <button onClick={() => removeFriend(f.id)} title="Удалить из друзей">
+                                            Удалить
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+
+                    <hr />
+
+                    <div className="profile-requests">
+                        <h3>Входящие запросы в друзья</h3>
+                        {friendRequests.length === 0 ? (
+                            <p>Нет входящих запросов.</p>
+                        ) : (
+                            <ul className="requests-list">
+                                {friendRequests.map((fr) => (
+                                    <li key={fr.id}>
+                                        Запрос от пользователя ID {fr.requester_id}{" "}
+                                        <button onClick={() => confirmFriendRequest(fr.id)}>Принять</button>{" "}
+                                        <button onClick={() => rejectFriendRequest(fr.id)}>Отклонить</button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+
+                    <hr />
+
+                    <div className="profile-search">
+                        <h3>Добавить друга</h3>
+                        <div>
+                            <input
+                                type="text"
+                                placeholder="Введите ник пользователя"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                            />
+                            <button onClick={handleSearch}>Искать</button>
+                        </div>
+                        {searchResults.length > 0 && (
+                            <ul className="search-results">
+                                {searchResults.map((u) => (
+                                    <li key={u.id}>
+                                        {u.username} <button onClick={() => addFriend(u.id)}>Добавить</button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+
+                    <hr />
+
+                    <div className="profile-calls">
+                        <h3>История звонков</h3>
+                        {callHistory.length === 0 ? (
+                            <p>Нет записей о звонках.</p>
+                        ) : (
+                            <ul className="calls-list">
+                                {callHistory.map((call) => (
+                                    <li key={call.id}>
+                                        {call.call_type === "personal" ? "Личный" : "Групповой"} звонок от{" "}
+                                        {call.caller_username}
+                                        {call.recipients?.length > 0 && <> к {call.recipients.join(", ")}</>} с{" "}
+                                        {formatUTC(call.start_time)} до {formatUTC(call.end_time)} (Длительность:{" "}
+                                        {call.duration} сек.)
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+
+                    <hr />
+
+                    <div className="profile-logout">
+                        <button onClick={onLogout}>Выйти</button>
+                    </div>
+                </>
+            )}
         </div>
     );
 }
