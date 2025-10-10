@@ -122,7 +122,7 @@ export default function CallsPage({ user }) {
         socket.on('end_call', leaveCallSilent);
 
         return () => socket.removeAllListeners();
-    }, [user, navigate, createPC]);
+    }, [user, navigate, createPC, leaveCallSilent]);
 
     /* ------------------------- логика звонков ------------------------ */
     const ensureBaseAudio = async () => {
@@ -215,7 +215,7 @@ export default function CallsPage({ user }) {
     };
 
     /* -------------------- завершение и история звонков ------------------------ */
-    const cleanUp = () => {
+    const cleanUp = useCallback(() => {
         Object.values(peerConnsRef.current).forEach(pc => pc.close());
         peerConnsRef.current = {};
         localStreamRef.current?.getTracks().forEach(t => t.stop());
@@ -228,9 +228,11 @@ export default function CallsPage({ user }) {
         setMicOn(true);
         setCamOn(false);
         setScreenOn(false);
-    };
+    }, []);
 
-    const leaveCallSilent = () => cleanUp();
+    const leaveCallSilent = useCallback(() => {
+        cleanUp();
+    }, [cleanUp]);
 
     const leaveCall = () => {
         socket.emit('end_call', { from: user.id, targets: participants });

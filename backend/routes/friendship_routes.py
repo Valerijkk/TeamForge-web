@@ -22,7 +22,13 @@ def send_friend_request():
         ((Friendship.requester_id == receiver_id) & (Friendship.receiver_id == requester_id))
     ).first()
     if existing:
-        return jsonify({'status': 'fail', 'message': 'Запрос уже отправлен или вы уже друзья'}), 400
+        msg = 'Запрос уже существует' if existing.status == 'pending' else 'Вы уже друзья'
+        return jsonify({
+            'status': 'success',
+            'message': msg,
+            'friend_request_id': existing.id,
+            'status_value': existing.status
+        }), 200
 
     # Создаём запись
     fr = Friendship(requester_id=requester_id, receiver_id=receiver_id, status='pending')
