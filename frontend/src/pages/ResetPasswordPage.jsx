@@ -1,30 +1,37 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
 
-// Компонент страницы для запроса сброса пароля
+const BASE_URL = process.env.REACT_APP_API_BASE || "http://localhost:5000";
+
 function ResetPasswordPage() {
-    // Состояние для хранения введённого email
-    const [email, setEmail] = useState('');
+    const [email, setEmail] = useState("");
+    const [sending, setSending] = useState(false);
+    const [result, setResult] = useState({ type: "", text: "" });
 
-    // Отправка запроса на сброс пароля
     const handleResetRequest = async () => {
-        // Проверяем, что поле email не пустое
-        if (!email.trim()) {
-            console.error('Введите ваш email');
+        const value = email.trim();
+        if (!value) {
+            setResult({ type: "error", text: "Введите ваш email" });
             return;
         }
+        setSending(true);
+        setResult({ type: "", text: "" });
         try {
-            // Отправляем POST-запрос на сервер с email
-            const res = await fetch('http://localhost:5000/reset-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
+            const res = await fetch(`${BASE_URL}/reset-password`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: value }),
             });
             const data = await res.json();
-            // Вместо alert выводим сообщение в консоль или обновляем состояние для отображения уведомления
-            console.log(data.message);
+            setResult({
+                type: res.ok ? "ok" : "error",
+                text: data?.message || (res.ok ? "Письмо отправлено" : "Ошибка"),
+            });
         } catch (error) {
-            console.error('Ошибка при запросе сброса пароля:', error);
+            console.error("Ошибка при запросе сброса пароля:", error);
+            setResult({ type: "error", text: "Не удалось отправить письмо. Попробуйте позже." });
+        } finally {
+            setSending(false);
         }
     };
 
@@ -37,11 +44,21 @@ function ResetPasswordPage() {
                     placeholder="Введите ваш email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleResetRequest()}
+                    aria-label="Email для восстановления"
                 />
             </div>
-            {/* Кнопка для отправки инструкции на указанный email */}
-            <button onClick={handleResetRequest}>Отправить инструкцию</button>
-            <p>
+            <button onClick={handleResetRequest} disabled={sending}>
+                {sending ? "Отправляю…" : "Отправить инструкцию"}
+            </button>
+
+            {result.text && (
+                <div className={result.type === "error" ? "error-inline" : "success-inline"}>
+                    {result.text}
+                </div>
+            )}
+
+            <p style={{ marginTop: 12 }}>
                 Вернуться к <Link to="/login">Входу</Link>
             </p>
         </div>
