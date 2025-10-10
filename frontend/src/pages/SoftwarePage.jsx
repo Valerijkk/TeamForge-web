@@ -1,159 +1,216 @@
-import React, { useState, useEffect } from 'react';
-import './SoftwarePage.css';
+import React, { useState, useEffect } from "react";
+import {
+    Container,
+    Typography,
+    Grid,
+    Card,
+    CardContent,
+    CardMedia,
+    CardActions,
+    Button,
+    TextField,
+    Box,
+    Link,
+} from "@mui/material";
+import { Edit, Delete as DeleteIcon, GitHub } from "@mui/icons-material";
 
-// Компонент страницы для отображения и управления списком программного обеспечения
+const BASE_URL = process.env.REACT_APP_API_BASE || "http://localhost:5000";
+
 function SoftwarePage({ isAdmin }) {
-    // Состояние: список ПО и данные формы для добавления/редактирования
     const [softwareList, setSoftwareList] = useState([]);
     const [formData, setFormData] = useState({
         id: null,
-        title: '',
-        description: '',
-        image_url: '',
-        github_url: ''
+        title: "",
+        description: "",
+        image_url: "",
+        github_url: "",
     });
 
-    // Функция для загрузки списка ПО с сервера
     const fetchSoftware = () => {
-        fetch('http://localhost:5000/software')
-            .then(res => res.json())
-            .then(data => setSoftwareList(data))
-            .catch(err => console.error(err));
+        fetch(`${BASE_URL}/software`)
+            .then((res) => res.json())
+            .then((data) => setSoftwareList(Array.isArray(data) ? data : []))
+            .catch((err) => console.error(err));
     };
 
-    // Загружаем список ПО при монтировании компонента
     useEffect(() => {
         fetchSoftware();
     }, []);
 
-    // Обработка отправки формы: создаём или обновляем запись в зависимости от наличия formData.id
     const handleSubmit = (e) => {
         e.preventDefault();
-        const method = formData.id ? 'PUT' : 'POST';
+        const method = formData.id ? "PUT" : "POST";
         const url = formData.id
-            ? `http://localhost:5000/software/${formData.id}`
-            : 'http://localhost:5000/software';
-        // Передаем admin: true для проверки прав
+            ? `${BASE_URL}/software/${formData.id}`
+            : `${BASE_URL}/software`;
+
         fetch(url, {
             method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...formData, admin: true })
+            headers: { "Content-Type": "application/json" },
+            // сохранён флаг admin: true, как у тебя
+            body: JSON.stringify({ ...formData, admin: true }),
         })
-            .then(res => res.json())
+            .then((res) => res.json())
             .then(() => {
-                // Сброс формы и обновление списка
-                setFormData({ id: null, title: '', description: '', image_url: '', github_url: '' });
+                setFormData({
+                    id: null,
+                    title: "",
+                    description: "",
+                    image_url: "",
+                    github_url: "",
+                });
                 fetchSoftware();
             })
-            .catch(err => console.error(err));
+            .catch((err) => console.error(err));
     };
 
-    // Заполнение формы данными выбранного ПО для редактирования
-    const handleEdit = (sw) => {
-        setFormData(sw);
-    };
+    const handleEdit = (sw) => setFormData(sw);
 
-    // Удаление ПО по ID
     const handleDelete = (id) => {
-        fetch(`http://localhost:5000/software/${id}`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ admin: true })
+        fetch(`${BASE_URL}/software/${id}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ admin: true }),
         })
-            .then(res => res.json())
+            .then((res) => res.json())
             .then(() => fetchSoftware())
-            .catch(err => console.error(err));
+            .catch((err) => console.error(err));
     };
 
     return (
-        <div className="container software-page">
-            <h2 className="software-title">Программное обеспечение</h2>
+        <Container sx={{ mt: 4 }}>
+            <Typography variant="h4" gutterBottom>
+                Программное обеспечение
+            </Typography>
 
-            {/* Карточки программного обеспечения */}
-            <div className="software-cards-wrapper">
-                {softwareList.map(sw => (
-                    <div key={sw.id} className="software-card">
-                        {sw.image_url && (
-                            <img
-                                src={sw.image_url}
-                                alt={sw.title}
-                                className="software-image"
-                            />
-                        )}
-                        <h3 className="software-card-title">{sw.title}</h3>
-                        <p className="software-card-desc">{sw.description}</p>
-                        {sw.github_url && (
-                            <a
-                                href={sw.github_url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="software-github-link"
-                            >
-                                GitHub
-                            </a>
-                        )}
-                        {/* Кнопки редактирования и удаления для администратора */}
-                        {isAdmin && (
-                            <div className="software-admin-buttons">
-                                <button onClick={() => handleEdit(sw)}>
-                                    Редактировать
-                                </button>
-                                <button onClick={() => handleDelete(sw.id)}>
-                                    Удалить
-                                </button>
-                            </div>
-                        )}
-                    </div>
+            <Grid container spacing={2}>
+                {softwareList.map((sw) => (
+                    <Grid item xs={12} sm={6} md={4} key={sw.id}>
+                        <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+                            {sw.image_url && (
+                                <CardMedia
+                                    component="img"
+                                    image={sw.image_url}
+                                    alt={sw.title}
+                                    sx={{ aspectRatio: "16/9", objectFit: "cover" }}
+                                />
+                            )}
+                            <CardContent sx={{ flexGrow: 1 }}>
+                                <Typography variant="h6">{sw.title}</Typography>
+                                <Typography variant="body2" sx={{ mt: 1 }}>
+                                    {sw.description}
+                                </Typography>
+                            </CardContent>
+                            <CardActions sx={{ justifyContent: "space-between", px: 2, pb: 2 }}>
+                                <Box>
+                                    {sw.github_url && (
+                                        <Button
+                                            size="small"
+                                            startIcon={<GitHub />}
+                                            component={Link}
+                                            href={sw.github_url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                        >
+                                            GitHub
+                                        </Button>
+                                    )}
+                                </Box>
+                                {isAdmin && (
+                                    <Box>
+                                        <Button
+                                            size="small"
+                                            startIcon={<Edit />}
+                                            onClick={() => handleEdit(sw)}
+                                        >
+                                            Редактировать
+                                        </Button>
+                                        <Button
+                                            size="small"
+                                            color="error"
+                                            startIcon={<DeleteIcon />}
+                                            onClick={() => handleDelete(sw.id)}
+                                        >
+                                            Удалить
+                                        </Button>
+                                    </Box>
+                                )}
+                            </CardActions>
+                        </Card>
+                    </Grid>
                 ))}
-            </div>
+            </Grid>
 
-            {/* Форма добавления/редактирования ПО (видна только администратору) */}
             {isAdmin && (
-                <div className="software-form-wrapper">
-                    <h3>{formData.id ? 'Редактировать ПО' : 'Добавить ПО'}</h3>
-                    <form onSubmit={handleSubmit} className="software-form">
-                        <input
-                            type="text"
-                            placeholder="Название"
-                            value={formData.title}
-                            onChange={(e) =>
-                                setFormData({ ...formData, title: e.target.value })
-                            }
-                        /><br />
+                <Box component="form" onSubmit={handleSubmit} sx={{ mt: 4 }}>
+                    <Typography variant="h5" gutterBottom>
+                        {formData.id ? "Редактировать ПО" : "Добавить ПО"}
+                    </Typography>
 
-                        <textarea
-                            placeholder="Описание"
-                            value={formData.description}
-                            onChange={(e) =>
-                                setFormData({ ...formData, description: e.target.value })
-                            }
-                        /><br />
+                    <TextField
+                        label="Название"
+                        fullWidth
+                        margin="normal"
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    />
 
-                        <input
-                            type="text"
-                            placeholder="URL изображения"
-                            value={formData.image_url}
-                            onChange={(e) =>
-                                setFormData({ ...formData, image_url: e.target.value })
-                            }
-                        /><br />
+                    <TextField
+                        label="Описание"
+                        fullWidth
+                        margin="normal"
+                        multiline
+                        minRows={3}
+                        value={formData.description}
+                        onChange={(e) =>
+                            setFormData({ ...formData, description: e.target.value })
+                        }
+                    />
 
-                        <input
-                            type="text"
-                            placeholder="GitHub URL"
-                            value={formData.github_url}
-                            onChange={(e) =>
-                                setFormData({ ...formData, github_url: e.target.value })
-                            }
-                        /><br />
+                    <TextField
+                        label="URL изображения"
+                        fullWidth
+                        margin="normal"
+                        value={formData.image_url}
+                        onChange={(e) =>
+                            setFormData({ ...formData, image_url: e.target.value })
+                        }
+                    />
 
-                        <button type="submit">
-                            {formData.id ? 'Обновить' : 'Добавить'}
-                        </button>
-                    </form>
-                </div>
+                    <TextField
+                        label="GitHub URL"
+                        fullWidth
+                        margin="normal"
+                        value={formData.github_url}
+                        onChange={(e) =>
+                            setFormData({ ...formData, github_url: e.target.value })
+                        }
+                    />
+
+                    <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
+                        <Button type="submit" variant="contained">
+                            {formData.id ? "Обновить" : "Добавить"}
+                        </Button>
+                        {formData.id && (
+                            <Button
+                                type="button"
+                                onClick={() =>
+                                    setFormData({
+                                        id: null,
+                                        title: "",
+                                        description: "",
+                                        image_url: "",
+                                        github_url: "",
+                                    })
+                                }
+                            >
+                                Отмена
+                            </Button>
+                        )}
+                    </Box>
+                </Box>
             )}
-        </div>
+        </Container>
     );
 }
 
