@@ -2,23 +2,21 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# переменные сборки CRA (начинаются с REACT_APP_)
+# CRA читает переменные вида REACT_APP_* на этапе сборки
 ARG REACT_APP_API_URL
 ENV REACT_APP_API_URL=${REACT_APP_API_URL}
 
-# ставим зависимости
-COPY frontend/package*.json ./
+COPY package*.json ./
 RUN npm ci
 
-# билдим
-COPY frontend/ ./
+COPY . .
 RUN npm run build
 
 # ===== Stage 2: serve with nginx =====
 FROM nginx:alpine
-# SPA fallback, gzip и т.п. — наш конфиг
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
-# статический билд
+
+# SPA-fallback, gzip и т.п.
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/build /usr/share/nginx/html
 
 EXPOSE 80
